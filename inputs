@@ -4,4 +4,6 @@ fdtd.prob_lo = 0.0 0.0 0.0  # lower-left corner of the domain
 fdtd.prob_hi = 1.0 1.0 1.0  # upper-right corner
 
 fdtd.max_step = 100
+fdtd.plot_int = 10          # write numpy output every N steps (0 = off)
+fdtd.output_dir = numpy_out # output directory for .bin + .json files
 fdtd.cfl = 0.99

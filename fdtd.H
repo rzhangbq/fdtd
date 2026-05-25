@@ -5,6 +5,8 @@
 #include <AMReX_Geometry.H>
 #include <AMReX_MultiFab.H>
 
+#include <string>
+
 class FDTD
 {
 public:
@@ -15,6 +17,8 @@ public:
     void evolve ();
 
 private:
+    void writeNumpyOutput (int step, amrex::Real time) const;
+
     amrex::IntVect m_n_cells;
     int m_max_grid_size = 64;
     amrex::Geometry m_geom;
@@ -22,7 +26,9 @@ private:
     amrex::DistributionMapping m_dmap;
 
     int m_max_step = 100;
+    int m_plot_int = 0;
     amrex::Real m_cfl = 0.99;
+    std::string m_output_dir = "numpy_out";
 
     amrex::Array<amrex::MultiFab,AMREX_SPACEDIM> m_efields;
     amrex::Array<amrex::MultiFab,AMREX_SPACEDIM> m_bfields;

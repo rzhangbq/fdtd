@@ -1,9 +1,15 @@
 
 #include "fdtd.H"
 
+#include <AMReX_MultiFabUtil.H>
 #include <AMReX_ParmParse.H>
+#include <AMReX_Utility.H>
 
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <sys/stat.h>
 
 using namespace amrex;
 
@@ -18,7 +24,9 @@ FDTD::FDTD ()
     pp.getarr("prob_hi", prob_hi);
 
     pp.query("max_step", m_max_step);
+    pp.query("plot_int", m_plot_int);
     pp.query("cfl", m_cfl);
+    pp.query("output_dir", m_output_dir);
 
     Box domain(IntVect(0), m_n_cells-1);
     RealBox real_box(prob_lo.begin(), prob_hi.begin());
@@ -52,6 +60,83 @@ void FDTD::initData ()
     }
 }
 
+void FDTD::writeNumpyOutput (int step, Real time) const
+{
+    MultiFab plotmf(m_grids, m_dmap, 6, 0);
+
+    Vector<const MultiFab*> efields{
+        AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])
+    };
+    Vector<const MultiFab*> bfields{
+        AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])
+    };
+
+    average_edge_to_cellcenter(plotmf, 0, efields);
+    average_face_to_cellcenter(plotmf, 3, bfields);
+
+    const Box& domain_box = m_geom.Domain();
+    const auto lo = domain_box.loVect();
+    const auto hi = domain_box.hiVect();
+    const int nx = hi[0] - lo[0] + 1;
+    const int ny = hi[1] - lo[1] + 1;
+    const int nz = hi[2] - lo[2] + 1;
+    constexpr int ncomp = 6;
+
+    Vector<double> data(static_cast<std::size_t>(nx) * ny * nz * ncomp, 0.0);
+
+    for (MFIter mfi(plotmf); mfi.isValid(); ++mfi) {
+        const Box& bx = mfi.validbox();
+        auto const& arr = plotmf.const_array(mfi);
+        for (int k = bx.smallEnd(2); k <= bx.bigEnd(2); ++k) {
+            for (int j = bx.smallEnd(1); j <= bx.bigEnd(1); ++j) {
+                for (int i = bx.smallEnd(0); i <= bx.bigEnd(0); ++i) {
+                    const std::size_t base =
+                        (static_cast<std::size_t>(i - lo[0]) * ny + (j - lo[1])) * nz
+                        + (k - lo[2]);
+                    for (int c = 0; c < ncomp; ++c) {
+                        data[base * ncomp + c] = static_cast<double>(arr(i, j, k, c));
+                    }
+                }
+            }
+        }
+    }
+
+    if (ParallelDescriptor::MyProc() != 0) {
+        return;
+    }
+
+    UtilCreateDirectory(m_output_dir, 0755);
+
+    std::ostringstream step_tag;
+    step_tag << std::setw(5) << std::setfill('0') << step;
+
+    const std::string bin_file = m_output_dir + "/step_" + step_tag.str() + "_fields.bin";
+    const std::string meta_file = m_output_dir + "/step_" + step_tag.str() + "_meta.json";
+
+    {
+        std::ofstream ofs(bin_file, std::ios::binary);
+        ofs.write(reinterpret_cast<const char*>(data.data()),
+                  static_cast<std::streamsize>(data.size() * sizeof(double)));
+    }
+
+    auto problo = m_geom.ProbLoArray();
+    auto probhi = m_geom.ProbHiArray();
+
+    std::ofstream meta(meta_file);
+    meta << std::setprecision(17);
+    meta << "{\n";
+    meta << "  \"step\": " << step << ",\n";
+    meta << "  \"time\": " << time << ",\n";
+    meta << "  \"shape\": [" << nx << ", " << ny << ", " << nz << ", " << ncomp << "],\n";
+    meta << "  \"dtype\": \"float64\",\n";
+    meta << "  \"layout\": \"C\",\n";
+    meta << "  \"components\": [\"Ex\", \"Ey\", \"Ez\", \"Bx\", \"By\", \"Bz\"],\n";
+    meta << "  \"fields_file\": \"" << bin_file << "\",\n";
+    meta << "  \"prob_lo\": [" << problo[0] << ", " << problo[1] << ", " << problo[2] << "],\n";
+    meta << "  \"prob_hi\": [" << probhi[0] << ", " << probhi[1] << ", " << probhi[2] << "]\n";
+    meta << "}\n";
+}
+
 void FDTD::evolve ()
 {
     constexpr Real c = 2.99792458e8;
@@ -64,6 +149,12 @@ void FDTD::evolve ()
     auto const period = m_geom.periodicity();
     Vector<MultiFab*> efields{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
     Vector<MultiFab*> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+
+    Real time = 0.0_rt;
+
+    if (m_plot_int > 0) {
+        writeNumpyOutput(0, time);
+    }
 
     for (int step = 0; step < m_max_step; ++step)
     {
@@ -131,5 +222,11 @@ void FDTD::evolve ()
                                     - dxinv[1]*(ex[b](i,j+1,k) - ex[b](i,j,k)));
         });
         Gpu::streamSynchronize();
+
+        time += dt;
+
+        if (m_plot_int > 0 && (step + 1) % m_plot_int == 0) {
+            writeNumpyOutput(step + 1, time);
+        }
     }
 }

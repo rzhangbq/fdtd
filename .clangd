@@ -1,0 +1,29 @@
+CompileFlags:
+  Add:
+    # AMReX (see GNUmakefile AMREX_HOME and tmp_build_dir from `make`)
+    - -I../amrex/Src/Base
+    - -I../amrex/Src/Base/Parser
+    - -Itmp_build_dir/s/3d.gnu.EXE
+    - -I.
+    # Match `make -n fdtd.o` defines
+    - -DAMREX_EXPORT_DYNAMIC
+    - -DBL_NO_FORT
+    - -DAMREX_SPACEDIM=3
+
+---
+# Treat C files as C17 (.H is AMReX C++ — do not match here; macOS may be case-insensitive)
+If:
+  PathMatch: .*\.c$
+CompileFlags:
+  Add:
+    - -xc
+    - -std=c17
+
+---
+# Treat C++ sources and AMReX-style .H headers as C++20
+If:
+  PathMatch: .*\.(cpp|cc|cxx|hpp|ipp|hh|hxx|H)$
+CompileFlags:
+  Add:
+    - -xc++
+    - -std=c++20
