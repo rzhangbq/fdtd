@@ -1,7 +1,10 @@
 
 #include "fdtd.H"
 
+#include <AMReX_MultiFabUtil.H>
 #include <AMReX_ParmParse.H>
+#include <AMReX_PlotFileUtil.H>
+#include <AMReX_Utility.H>
 
 #include <algorithm>
 
@@ -18,6 +21,7 @@ FDTD::FDTD ()
     pp.getarr("prob_hi", prob_hi);
 
     pp.query("max_step", m_max_step);
+    pp.query("plot_int", m_plot_int);
     pp.query("cfl", m_cfl);
 
     Box domain(IntVect(0), m_n_cells-1);
@@ -52,6 +56,25 @@ void FDTD::initData ()
     }
 }
 
+void FDTD::writePlotFile (int step, Real time) const
+{
+    MultiFab plotmf(m_grids, m_dmap, 6, 0);
+
+    Vector<const MultiFab*> efields{
+        AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])
+    };
+    Vector<const MultiFab*> bfields{
+        AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])
+    };
+
+    average_edge_to_cellcenter(plotmf, 0, efields);
+    average_face_to_cellcenter(plotmf, 3, bfields);
+
+    Vector<std::string> varnames{"Ex", "Ey", "Ez", "Bx", "By", "Bz"};
+    const std::string pltfile = Concatenate("plt", step, 5);
+    WriteSingleLevelPlotfile(pltfile, plotmf, varnames, m_geom, time, step);
+}
+
 void FDTD::evolve ()
 {
     constexpr Real c = 2.99792458e8;
@@ -59,11 +82,16 @@ void FDTD::evolve ()
     auto dx = m_geom.CellSizeArray();
     Real dt = std::min({dx[0],dx[1],dx[2]}) / c * m_cfl;
     Real c2dt = c*c*dt;
+    Real time = 0.0_rt;
     auto dxinv = m_geom.InvCellSizeArray();
 
     auto const period = m_geom.periodicity();
     Vector<MultiFab*> efields{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
     Vector<MultiFab*> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+
+    if (m_plot_int > 0) {
+        writePlotFile(0, time);
+    }
 
     for (int step = 0; step < m_max_step; ++step)
     {
@@ -131,5 +159,11 @@ void FDTD::evolve ()
                                     - dxinv[1]*(ex[b](i,j+1,k) - ex[b](i,j,k)));
         });
         Gpu::streamSynchronize();
+
+        time += dt;
+
+        if (m_plot_int > 0 && (step+1) % m_plot_int == 0) {
+            writePlotFile(step+1, time);
+        }
     }
 }
