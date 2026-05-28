@@ -1,5 +1,5 @@
-#ifndef FDTD_H_
-#define FDTD_H_
+#ifndef ADI_H_
+#define ADI_H_
 
 #include <AMReX_Array.H>
 #include <AMReX_Geometry.H>
@@ -7,11 +7,11 @@
 
 #include <string>
 
-class FDTD
+class ADI
 {
 public:
 
-    FDTD ();
+    ADI ();
 
     void initData ();
     void evolve ();

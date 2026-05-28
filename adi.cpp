@@ -1,5 +1,5 @@
 
-#include "fdtd.H"
+#include "adi.H"
 #include "util.H"
 
 #include <AMReX_ParmParse.H>
@@ -24,9 +24,9 @@ Real staggered_coord (int component, int coord_dir, int i, int j, int k,
 }
 } // namespace
 
-FDTD::FDTD ()
+ADI::ADI ()
 {
-    ParmParse pp("fdtd");
+    ParmParse pp("adi");
     pp.getarr("n_cells", m_n_cells);
     pp.query("max_grid_size", m_max_grid_size);
 
@@ -41,7 +41,7 @@ FDTD::FDTD ()
     pp.query("output_dir", m_output_dir);
 
     if (m_plot_format != "numpy" && m_plot_format != "visit") {
-        amrex::Abort("fdtd.plot_format must be \"numpy\" or \"visit\"");
+        amrex::Abort("adi.plot_format must be \"numpy\" or \"visit\"");
     }
 
     pp.query("ic", m_ic);
@@ -73,7 +73,7 @@ FDTD::FDTD ()
     }
 }
 
-void FDTD::initData ()
+void ADI::initData ()
 {
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         m_efields[idim].setVal(0);
@@ -83,7 +83,7 @@ void FDTD::initData ()
     const bool is_sinwave = (m_ic == "sinwave");
     const bool is_standing_wave = (m_ic == "standingwave");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(is_sinwave || is_standing_wave,
-                                     "fdtd.ic must be 'sinwave' or 'standingwave'");
+                                     "adi.ic must be 'sinwave' or 'standingwave'");
 
     AMREX_ALWAYS_ASSERT(m_sinwave_dir >= 0 && m_sinwave_dir < AMREX_SPACEDIM);
     AMREX_ALWAYS_ASSERT(m_sinwave_pol >= 0 && m_sinwave_pol < AMREX_SPACEDIM);
@@ -132,7 +132,7 @@ void FDTD::initData ()
     amrex::FillBoundary(bfields, m_geom.periodicity());
 }
 
-void FDTD::evolve ()
+void ADI::evolve ()
 {
     constexpr Real c = 2.99792458e8;
 

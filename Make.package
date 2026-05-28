@@ -1,2 +1,2 @@
-CEXE_sources += main.cpp fdtd.cpp
+CEXE_sources += main.cpp fdtd.cpp adi.cpp util.cpp
 
