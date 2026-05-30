@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1780101965 "adi.tex" "adi.pdf" "adi" 1780101966
+["pdflatex"] 1780106581 "adi.tex" "adi.pdf" "adi" 1780106582
   "/usr/local/texlive/2021/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2021/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2021/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -177,11 +177,11 @@
   "/usr/local/texlive/2021/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1616695603 5169178 a2ce6e2d73f603b690db6777d06dbccb ""
   "/usr/local/texlive/2021/texmf-var/web2c/pdftex/pdflatex.fmt" 1635689723 2724738 7ec18da32cd33ad17ea4b928f070b992 ""
   "/usr/local/texlive/2021/texmf.cnf" 1616695596 577 4c1911a7228e554c6032256d3cf5567d ""
-  "adi.aux" 1780101966 5242 e8671683ef19b4312db31515ad448c3e "pdflatex"
-  "adi.out" 1780101966 1290 cb96b238d00fbf632f82b809570a098f "pdflatex"
-  "adi.tex" 1780101953 32222 a0360cde39df9d7d68a3b5fa081ded90 ""
+  "adi.aux" 1780106582 6600 300d30d6e68cb918a5c30c82e081899e "pdflatex"
+  "adi.out" 1780106582 1454 622d8fe344abe564dc3619c6513133fb "pdflatex"
+  "adi.tex" 1780106556 49653 83bc7aac841d04c4a7744e8b5699e15b ""
   (generated)
-  "adi.aux"
-  "adi.log"
   "adi.pdf"
+  "adi.log"
+  "adi.aux"
   "adi.out"
