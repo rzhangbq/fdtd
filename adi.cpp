@@ -332,6 +332,15 @@ void ADI::evolve()
     definePencilFields(bfields_y, m_bfields, bay, dmy);
     definePencilFields(bfields_z, m_bfields, baz, dmz);
 
+    // Initialize ghost values once before stepping.
+    {
+        auto const period = m_geom.periodicity();
+        Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
+        Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+        amrex::FillBoundary(efield_ptrs, period);
+        amrex::FillBoundary(bfield_ptrs, period);
+    }
+
     if (m_plot_int > 0)
     {
         UtilWritePlotOutput(m_plot_format, m_output_dir, 0, time,
@@ -366,9 +375,6 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
     auto const period = m_geom.periodicity();
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
     Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
-
-    amrex::FillBoundary(efield_ptrs, period);
-    amrex::FillBoundary(bfield_ptrs, period);
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
@@ -415,9 +421,6 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
     auto const period = m_geom.periodicity();
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
     Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
-
-    amrex::FillBoundary(efield_ptrs, period);
-    amrex::FillBoundary(bfield_ptrs, period);
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
