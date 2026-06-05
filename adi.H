@@ -10,18 +10,24 @@
 class ADI
 {
 public:
+    using FieldArray = amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>;
+
     ADI();
 
     void initData();
     void evolve();
 
     // First ADI half-step (eq:adi-first-half-amrex in notes/adi.tex)
-    void adiFirstHalfStep(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& efields,
-                          amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& bfields,
+    void adiFirstHalfStep(FieldArray& efields, FieldArray& bfields,
+                          FieldArray& efields_x, FieldArray& efields_y,
+                          FieldArray& efields_z, FieldArray& bfields_x,
+                          FieldArray& bfields_y, FieldArray& bfields_z,
                           amrex::Real dt);
     // Second ADI half-step (eq:adi-second-half-amrex in notes/adi.tex)
-    void adiSecondHalfStep(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& efields,
-                           amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& bfields,
+    void adiSecondHalfStep(FieldArray& efields, FieldArray& bfields,
+                           FieldArray& efields_x, FieldArray& efields_y,
+                           FieldArray& efields_z, FieldArray& bfields_x,
+                           FieldArray& bfields_y, FieldArray& bfields_z,
                            amrex::Real dt);
 
     // buildRhs / solveImplicit stubs (to be filled in later)

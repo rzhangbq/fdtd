@@ -18,6 +18,30 @@ namespace
         return MultiFab(field.boxArray(), field.DistributionMap(), 1, 0);
     }
 
+    void definePencilFields(ADI::FieldArray &pencils,
+                            ADI::FieldArray const &fields,
+                            BoxArray const &base_ba,
+                            DistributionMapping const &dm)
+    {
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+        {
+            BoxArray ba(base_ba);
+            ba.convert(fields[idim].ixType());
+            pencils[idim].define(ba, dm, fields[idim].nComp(), fields[idim].nGrowVect());
+        }
+    }
+
+    void copyFields(ADI::FieldArray &dst,
+                    ADI::FieldArray const &src,
+                    Periodicity const &period)
+    {
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+        {
+            dst[idim].ParallelCopy(src[idim], 0, 0, src[idim].nComp(),
+                                   IntVect(0), dst[idim].nGrowVect(), period);
+        }
+    }
+
     Array<MultiFab, AMREX_SPACEDIM> copyFieldsWithGhosts(
         Array<MultiFab, AMREX_SPACEDIM> const &fields)
     {
@@ -130,16 +154,13 @@ namespace
         a[0] = 0.0_rt;
         c[nsolve - 1] = 0.0_rt;
 
-        BoxArray full_ba(domain);
-        DistributionMapping full_dm(full_ba);
-        MultiFab field_full(full_ba, full_dm, 1, 0);
-        field_full.ParallelCopy(rhs, 0, 0, 1);
+        field.ParallelCopy(rhs, 0, 0, 1);
 
-        for (MFIter mfi(field_full); mfi.isValid(); ++mfi)
+        for (MFIter mfi(field); mfi.isValid(); ++mfi)
         {
             Box const &bx = mfi.validbox();
             amrex::ignore_unused(solver_name);
-            auto const &field_arr = field_full.array(mfi);
+            auto const &field_arr = field.array(mfi);
 
             if (solve_dir == 0)
             {
@@ -213,7 +234,6 @@ namespace
             }
         }
 
-        field.ParallelCopy(field_full, 0, 0, 1);
     }
 } // namespace
 
@@ -293,6 +313,25 @@ void ADI::evolve()
 
     Real time = 0.0_rt;
 
+    Box const &domain = m_geom.Domain();
+    int const nprocs = ParallelDescriptor::NProcs();
+    BoxArray bax = amrex::decompose(domain, nprocs, {false, true, true});
+    BoxArray bay = amrex::decompose(domain, nprocs, {true, false, true});
+    BoxArray baz = amrex::decompose(domain, nprocs, {true, true, false});
+
+    DistributionMapping dmx(bax);
+    DistributionMapping dmy(bay);
+    DistributionMapping dmz(baz);
+
+    FieldArray efields_x, efields_y, efields_z;
+    FieldArray bfields_x, bfields_y, bfields_z;
+    definePencilFields(efields_x, m_efields, bax, dmx);
+    definePencilFields(efields_y, m_efields, bay, dmy);
+    definePencilFields(efields_z, m_efields, baz, dmz);
+    definePencilFields(bfields_x, m_bfields, bax, dmx);
+    definePencilFields(bfields_y, m_bfields, bay, dmy);
+    definePencilFields(bfields_z, m_bfields, baz, dmz);
+
     if (m_plot_int > 0)
     {
         UtilWritePlotOutput(m_plot_format, m_output_dir, 0, time,
@@ -301,8 +340,10 @@ void ADI::evolve()
 
     for (int step = 0; step < m_max_step; ++step)
     {
-        adiFirstHalfStep(m_efields, m_bfields, dt);
-        adiSecondHalfStep(m_efields, m_bfields, dt);
+        adiFirstHalfStep(m_efields, m_bfields, efields_x, efields_y,
+                         efields_z, bfields_x, bfields_y, bfields_z, dt);
+        adiSecondHalfStep(m_efields, m_bfields, efields_x, efields_y,
+                          efields_z, bfields_x, bfields_y, bfields_z, dt);
 
         time += dt;
 
@@ -316,6 +357,9 @@ void ADI::evolve()
 
 void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
                            Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                           FieldArray& efields_x, FieldArray& efields_y,
+                           FieldArray& efields_z, FieldArray& bfields_x,
+                           FieldArray& bfields_y, FieldArray& bfields_z,
                            Real dt)
 {
     // eq:adi-first-half-amrex — implicit E along y,z,x; explicit B at n+1/2
@@ -328,13 +372,28 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
-    MultiFab rhs_ex = buildRhsEx1(efields, bfields, dt);
-    MultiFab rhs_ey = buildRhsEy1(efields, bfields, dt);
-    MultiFab rhs_ez = buildRhsEz1(efields, bfields, dt);
+    copyFields(efields_y, efields, period);
+    copyFields(bfields_y, bfields, period);
+    MultiFab rhs_ex = buildRhsEx1(efields_y, bfields_y, dt);
 
-    solveImplicitEx1(efields[0], rhs_ex, dt);
-    solveImplicitEy1(efields[1], rhs_ey, dt);
-    solveImplicitEz1(efields[2], rhs_ez, dt);
+    copyFields(efields_z, efields, period);
+    copyFields(bfields_z, bfields, period);
+    MultiFab rhs_ey = buildRhsEy1(efields_z, bfields_z, dt);
+
+    copyFields(efields_x, efields, period);
+    copyFields(bfields_x, bfields, period);
+    MultiFab rhs_ez = buildRhsEz1(efields_x, bfields_x, dt);
+
+    solveImplicitEx1(efields_y[0], rhs_ex, dt);
+    solveImplicitEy1(efields_z[1], rhs_ey, dt);
+    solveImplicitEz1(efields_x[2], rhs_ez, dt);
+
+    efields[0].ParallelCopy(efields_y[0], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
+    efields[1].ParallelCopy(efields_z[1], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
+    efields[2].ParallelCopy(efields_x[2], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
 
@@ -347,6 +406,9 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
 
 void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
                             Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                            FieldArray& efields_x, FieldArray& efields_y,
+                            FieldArray& efields_z, FieldArray& bfields_x,
+                            FieldArray& bfields_y, FieldArray& bfields_z,
                             Real dt)
 {
     // eq:adi-second-half-amrex — implicit E along z,x,y; explicit B at n+1
@@ -359,13 +421,28 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
-    MultiFab rhs_ex = buildRhsEx2(efields, bfields, dt);
-    MultiFab rhs_ey = buildRhsEy2(efields, bfields, dt);
-    MultiFab rhs_ez = buildRhsEz2(efields, bfields, dt);
+    copyFields(efields_z, efields, period);
+    copyFields(bfields_z, bfields, period);
+    MultiFab rhs_ex = buildRhsEx2(efields_z, bfields_z, dt);
 
-    solveImplicitEx2(efields[0], rhs_ex, dt);
-    solveImplicitEy2(efields[1], rhs_ey, dt);
-    solveImplicitEz2(efields[2], rhs_ez, dt);
+    copyFields(efields_x, efields, period);
+    copyFields(bfields_x, bfields, period);
+    MultiFab rhs_ey = buildRhsEy2(efields_x, bfields_x, dt);
+
+    copyFields(efields_y, efields, period);
+    copyFields(bfields_y, bfields, period);
+    MultiFab rhs_ez = buildRhsEz2(efields_y, bfields_y, dt);
+
+    solveImplicitEx2(efields_z[0], rhs_ex, dt);
+    solveImplicitEy2(efields_x[1], rhs_ey, dt);
+    solveImplicitEz2(efields_y[2], rhs_ez, dt);
+
+    efields[0].ParallelCopy(efields_z[0], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
+    efields[1].ParallelCopy(efields_x[1], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
+    efields[2].ParallelCopy(efields_y[2], 0, 0, 1,
+                            IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
 
