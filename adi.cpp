@@ -301,8 +301,8 @@ void ADI::evolve()
 
     for (int step = 0; step < m_max_step; ++step)
     {
-        adiFirstHalfStep(dt);
-        adiSecondHalfStep(dt);
+        adiFirstHalfStep(m_efields, m_bfields, dt);
+        adiSecondHalfStep(m_efields, m_bfields, dt);
 
         time += dt;
 
@@ -314,70 +314,76 @@ void ADI::evolve()
     }
 }
 
-void ADI::adiFirstHalfStep(Real dt)
+void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
+                           Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                           Real dt)
 {
     // eq:adi-first-half-amrex — implicit E along y,z,x; explicit B at n+1/2
     auto const period = m_geom.periodicity();
-    Vector<MultiFab *> efields{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
-    Vector<MultiFab *> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+    Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
+    Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
 
-    amrex::FillBoundary(efields, period);
-    amrex::FillBoundary(bfields, period);
+    amrex::FillBoundary(efield_ptrs, period);
+    amrex::FillBoundary(bfield_ptrs, period);
 
-    Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(m_efields);
+    Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
-    MultiFab rhs_ex = buildRhsEx1(dt);
-    MultiFab rhs_ey = buildRhsEy1(dt);
-    MultiFab rhs_ez = buildRhsEz1(dt);
+    MultiFab rhs_ex = buildRhsEx1(efields, bfields, dt);
+    MultiFab rhs_ey = buildRhsEy1(efields, bfields, dt);
+    MultiFab rhs_ez = buildRhsEz1(efields, bfields, dt);
 
-    solveImplicitEx1(m_efields[0], rhs_ex, dt);
-    solveImplicitEy1(m_efields[1], rhs_ey, dt);
-    solveImplicitEz1(m_efields[2], rhs_ez, dt);
+    solveImplicitEx1(efields[0], rhs_ex, dt);
+    solveImplicitEy1(efields[1], rhs_ey, dt);
+    solveImplicitEz1(efields[2], rhs_ez, dt);
 
-    amrex::FillBoundary(efields, period);
+    amrex::FillBoundary(efield_ptrs, period);
 
-    stepBx(m_efields[1], eold[2], dt);
-    stepBy(m_efields[2], eold[0], dt);
-    stepBz(m_efields[0], eold[1], dt);
+    stepBx(bfields[0], efields[1], eold[2], dt);
+    stepBy(bfields[1], efields[2], eold[0], dt);
+    stepBz(bfields[2], efields[0], eold[1], dt);
 
-    amrex::FillBoundary(bfields, period);
+    amrex::FillBoundary(bfield_ptrs, period);
 }
 
-void ADI::adiSecondHalfStep(Real dt)
+void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
+                            Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                            Real dt)
 {
     // eq:adi-second-half-amrex — implicit E along z,x,y; explicit B at n+1
     auto const period = m_geom.periodicity();
-    Vector<MultiFab *> efields{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
-    Vector<MultiFab *> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+    Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
+    Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
 
-    amrex::FillBoundary(efields, period);
-    amrex::FillBoundary(bfields, period);
+    amrex::FillBoundary(efield_ptrs, period);
+    amrex::FillBoundary(bfield_ptrs, period);
 
-    Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(m_efields);
+    Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
-    MultiFab rhs_ex = buildRhsEx2(dt);
-    MultiFab rhs_ey = buildRhsEy2(dt);
-    MultiFab rhs_ez = buildRhsEz2(dt);
+    MultiFab rhs_ex = buildRhsEx2(efields, bfields, dt);
+    MultiFab rhs_ey = buildRhsEy2(efields, bfields, dt);
+    MultiFab rhs_ez = buildRhsEz2(efields, bfields, dt);
 
-    solveImplicitEx2(m_efields[0], rhs_ex, dt);
-    solveImplicitEy2(m_efields[1], rhs_ey, dt);
-    solveImplicitEz2(m_efields[2], rhs_ez, dt);
+    solveImplicitEx2(efields[0], rhs_ex, dt);
+    solveImplicitEy2(efields[1], rhs_ey, dt);
+    solveImplicitEz2(efields[2], rhs_ez, dt);
 
-    amrex::FillBoundary(efields, period);
+    amrex::FillBoundary(efield_ptrs, period);
 
-    stepBx(eold[1], m_efields[2], dt);
-    stepBy(eold[2], m_efields[0], dt);
-    stepBz(eold[0], m_efields[1], dt);
+    stepBx(bfields[0], eold[1], efields[2], dt);
+    stepBy(bfields[1], eold[2], efields[0], dt);
+    stepBz(bfields[2], eold[0], efields[1], dt);
 
-    amrex::FillBoundary(bfields, period);
+    amrex::FillBoundary(bfield_ptrs, period);
 }
 
-MultiFab ADI::buildRhsEx1(Real dt) const
+MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ex row (vacuum), for tridiagonal solve along y.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[0]);
+    MultiFab rhs = makeRhsLike(efields[0]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dy = dx[1];
@@ -396,10 +402,10 @@ MultiFab ADI::buildRhsEx1(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ex_arr = m_efields[0].const_array(mfi);
-        auto const &ey_arr = m_efields[1].const_array(mfi);
-        auto const &bz_arr = m_bfields[2].const_array(mfi);
-        auto const &by_arr = m_bfields[1].const_array(mfi);
+        auto const &ex_arr = efields[0].const_array(mfi);
+        auto const &ey_arr = efields[1].const_array(mfi);
+        auto const &bz_arr = bfields[2].const_array(mfi);
+        auto const &by_arr = bfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -414,12 +420,14 @@ MultiFab ADI::buildRhsEx1(Real dt) const
     return rhs;
 }
 
-MultiFab ADI::buildRhsEy1(Real dt) const
+MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ey row (vacuum), for tridiagonal solve along z.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[1]);
+    MultiFab rhs = makeRhsLike(efields[1]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dz = dx[2];
@@ -438,10 +446,10 @@ MultiFab ADI::buildRhsEy1(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ey_arr = m_efields[1].const_array(mfi);
-        auto const &ez_arr = m_efields[2].const_array(mfi);
-        auto const &bx_arr = m_bfields[0].const_array(mfi);
-        auto const &bz_arr = m_bfields[2].const_array(mfi);
+        auto const &ey_arr = efields[1].const_array(mfi);
+        auto const &ez_arr = efields[2].const_array(mfi);
+        auto const &bx_arr = bfields[0].const_array(mfi);
+        auto const &bz_arr = bfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -456,12 +464,14 @@ MultiFab ADI::buildRhsEy1(Real dt) const
     return rhs;
 }
 
-MultiFab ADI::buildRhsEz1(Real dt) const
+MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ez row (vacuum), for tridiagonal solve along x.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[2]);
+    MultiFab rhs = makeRhsLike(efields[2]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dx_cell = dx[0];
@@ -480,10 +490,10 @@ MultiFab ADI::buildRhsEz1(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ez_arr = m_efields[2].const_array(mfi);
-        auto const &ex_arr = m_efields[0].const_array(mfi);
-        auto const &by_arr = m_bfields[1].const_array(mfi);
-        auto const &bx_arr = m_bfields[0].const_array(mfi);
+        auto const &ez_arr = efields[2].const_array(mfi);
+        auto const &ex_arr = efields[0].const_array(mfi);
+        auto const &by_arr = bfields[1].const_array(mfi);
+        auto const &bx_arr = bfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -522,12 +532,14 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
     solvePeriodicNodalLines(ez, rhs, 0, diag, "solveImplicitEz1");
 }
 
-MultiFab ADI::buildRhsEx2(Real dt) const
+MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ex row (vacuum), for tridiagonal solve along z.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[0]);
+    MultiFab rhs = makeRhsLike(efields[0]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dz = dx[2];
@@ -546,10 +558,10 @@ MultiFab ADI::buildRhsEx2(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ex_arr = m_efields[0].const_array(mfi);
-        auto const &ez_arr = m_efields[2].const_array(mfi);
-        auto const &bz_arr = m_bfields[2].const_array(mfi);
-        auto const &by_arr = m_bfields[1].const_array(mfi);
+        auto const &ex_arr = efields[0].const_array(mfi);
+        auto const &ez_arr = efields[2].const_array(mfi);
+        auto const &bz_arr = bfields[2].const_array(mfi);
+        auto const &by_arr = bfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -564,12 +576,14 @@ MultiFab ADI::buildRhsEx2(Real dt) const
     return rhs;
 }
 
-MultiFab ADI::buildRhsEy2(Real dt) const
+MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ey row (vacuum), for tridiagonal solve along x.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[1]);
+    MultiFab rhs = makeRhsLike(efields[1]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dx_cell = dx[0];
@@ -588,10 +602,10 @@ MultiFab ADI::buildRhsEy2(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ey_arr = m_efields[1].const_array(mfi);
-        auto const &ex_arr = m_efields[0].const_array(mfi);
-        auto const &bx_arr = m_bfields[0].const_array(mfi);
-        auto const &bz_arr = m_bfields[2].const_array(mfi);
+        auto const &ey_arr = efields[1].const_array(mfi);
+        auto const &ex_arr = efields[0].const_array(mfi);
+        auto const &bx_arr = bfields[0].const_array(mfi);
+        auto const &bz_arr = bfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -606,12 +620,14 @@ MultiFab ADI::buildRhsEy2(Real dt) const
     return rhs;
 }
 
-MultiFab ADI::buildRhsEz2(Real dt) const
+MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
+                          Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ez row (vacuum), for tridiagonal solve along y.
     constexpr Real c = 2.99792458e8;
 
-    MultiFab rhs = makeRhsLike(m_efields[2]);
+    MultiFab rhs = makeRhsLike(efields[2]);
 
     auto const dx = m_geom.CellSizeArray();
     Real const dy = dx[1];
@@ -630,10 +646,10 @@ MultiFab ADI::buildRhsEz2(Real dt) const
     {
         const Box &tilebx = mfi.tilebox();
         auto const &rhs_arr = rhs.array(mfi);
-        auto const &ez_arr = m_efields[2].const_array(mfi);
-        auto const &ey_arr = m_efields[1].const_array(mfi);
-        auto const &by_arr = m_bfields[1].const_array(mfi);
-        auto const &bx_arr = m_bfields[0].const_array(mfi);
+        auto const &ez_arr = efields[2].const_array(mfi);
+        auto const &ey_arr = efields[1].const_array(mfi);
+        auto const &by_arr = bfields[1].const_array(mfi);
+        auto const &bx_arr = bfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
@@ -672,7 +688,8 @@ void ADI::solveImplicitEz2(MultiFab &ez, MultiFab const &rhs, Real dt) const
     solvePeriodicNodalLines(ez, rhs, 1, diag, "solveImplicitEz2");
 }
 
-void ADI::stepBx(MultiFab const &ey_src, MultiFab const &ez_src, Real dt)
+void ADI::stepBx(MultiFab &bx_dst, MultiFab const &ey_src,
+                 MultiFab const &ez_src, Real dt)
 {
     // B_x += (dt/2)(dEy/dz - dEz/dy), vacuum Yee stencil.
     auto const dxinv = m_geom.InvCellSizeArray();
@@ -680,9 +697,9 @@ void ADI::stepBx(MultiFab const &ey_src, MultiFab const &ez_src, Real dt)
 
     auto const &ey = ey_src.const_arrays();
     auto const &ez = ez_src.const_arrays();
-    auto const &bx = m_bfields[0].arrays();
+    auto const &bx = bx_dst.arrays();
 
-    ParallelFor(m_bfields[0], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
+    ParallelFor(bx_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                 {
         bx[b](i, j, k) +=
             halfdt * (dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k)) -
@@ -691,16 +708,17 @@ void ADI::stepBx(MultiFab const &ey_src, MultiFab const &ez_src, Real dt)
     Gpu::streamSynchronize();
 }
 
-void ADI::stepBy(MultiFab const &ez_src, MultiFab const &ex_src, Real dt)
+void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
+                 MultiFab const &ex_src, Real dt)
 {
     auto const dxinv = m_geom.InvCellSizeArray();
     Real const halfdt = 0.5_rt * dt;
 
     auto const &ex = ex_src.const_arrays();
     auto const &ez = ez_src.const_arrays();
-    auto const &by = m_bfields[1].arrays();
+    auto const &by = by_dst.arrays();
 
-    ParallelFor(m_bfields[1], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
+    ParallelFor(by_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                 {
         by[b](i, j, k) +=
             halfdt * (dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k)) -
@@ -709,16 +727,17 @@ void ADI::stepBy(MultiFab const &ez_src, MultiFab const &ex_src, Real dt)
     Gpu::streamSynchronize();
 }
 
-void ADI::stepBz(MultiFab const &ex_src, MultiFab const &ey_src, Real dt)
+void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
+                 MultiFab const &ey_src, Real dt)
 {
     auto const dxinv = m_geom.InvCellSizeArray();
     Real const halfdt = 0.5_rt * dt;
 
     auto const &ex = ex_src.const_arrays();
     auto const &ey = ey_src.const_arrays();
-    auto const &bz = m_bfields[2].arrays();
+    auto const &bz = bz_dst.arrays();
 
-    ParallelFor(m_bfields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
+    ParallelFor(bz_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                 {
         bz[b](i, j, k) +=
             halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -

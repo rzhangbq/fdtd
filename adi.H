@@ -16,14 +16,24 @@ public:
     void evolve();
 
     // First ADI half-step (eq:adi-first-half-amrex in notes/adi.tex)
-    void adiFirstHalfStep(amrex::Real dt);
+    void adiFirstHalfStep(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& efields,
+                          amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& bfields,
+                          amrex::Real dt);
     // Second ADI half-step (eq:adi-second-half-amrex in notes/adi.tex)
-    void adiSecondHalfStep(amrex::Real dt);
+    void adiSecondHalfStep(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& efields,
+                           amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& bfields,
+                           amrex::Real dt);
 
     // buildRhs / solveImplicit stubs (to be filled in later)
-    amrex::MultiFab buildRhsEx1(amrex::Real dt) const;
-    amrex::MultiFab buildRhsEy1(amrex::Real dt) const;
-    amrex::MultiFab buildRhsEz1(amrex::Real dt) const;
+    amrex::MultiFab buildRhsEx1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
+    amrex::MultiFab buildRhsEy1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
+    amrex::MultiFab buildRhsEz1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
     void solveImplicitEx1(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
     void solveImplicitEy1(amrex::MultiFab &ey, amrex::MultiFab const &rhs,
@@ -31,9 +41,15 @@ public:
     void solveImplicitEz1(amrex::MultiFab &ez, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
 
-    amrex::MultiFab buildRhsEx2(amrex::Real dt) const;
-    amrex::MultiFab buildRhsEy2(amrex::Real dt) const;
-    amrex::MultiFab buildRhsEz2(amrex::Real dt) const;
+    amrex::MultiFab buildRhsEx2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
+    amrex::MultiFab buildRhsEy2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
+    amrex::MultiFab buildRhsEz2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+                                amrex::Real dt) const;
     void solveImplicitEx2(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
     void solveImplicitEy2(amrex::MultiFab &ey, amrex::MultiFab const &rhs,
@@ -43,11 +59,14 @@ public:
 
 private:
     // Explicit B += (dt/2) curl E with the old/new split used by the ADI half-step.
-    void stepBx(amrex::MultiFab const &ey_src, amrex::MultiFab const &ez_src,
+    void stepBx(amrex::MultiFab &bx, amrex::MultiFab const &ey_src,
+                amrex::MultiFab const &ez_src,
                 amrex::Real dt);
-    void stepBy(amrex::MultiFab const &ez_src, amrex::MultiFab const &ex_src,
+    void stepBy(amrex::MultiFab &by, amrex::MultiFab const &ez_src,
+                amrex::MultiFab const &ex_src,
                 amrex::Real dt);
-    void stepBz(amrex::MultiFab const &ex_src, amrex::MultiFab const &ey_src,
+    void stepBz(amrex::MultiFab &bz, amrex::MultiFab const &ex_src,
+                amrex::MultiFab const &ey_src,
                 amrex::Real dt);
 
     amrex::IntVect m_n_cells;
