@@ -18,7 +18,7 @@ namespace
     {
         return MultiFab(field.boxArray(), field.DistributionMap(), 1, 0);
     }
-
+    
     void definePencilFields(ADI::FieldArray &pencils,
                             ADI::FieldArray const &fields,
                             BoxArray const &base_ba,
@@ -31,7 +31,7 @@ namespace
             pencils[idim].define(ba, dm, fields[idim].nComp(), fields[idim].nGrowVect());
         }
     }
-
+        
     void copyFields(ADI::FieldArray &dst,
                     ADI::FieldArray const &src,
                     Periodicity const &period)
@@ -41,6 +41,9 @@ namespace
             dst[idim].ParallelCopy(src[idim], 0, 0, src[idim].nComp(),
                                    IntVect(0), dst[idim].nGrowVect(), period);
         }
+        Vector<MultiFab *> ptrs{AMREX_D_DECL(&dst[0], &dst[1], &dst[2])};
+        FillBoundary(ptrs, period);
+        Gpu::streamSynchronizeAll();
     }
 
     Array<MultiFab, AMREX_SPACEDIM> copyFieldsWithGhosts(
@@ -78,8 +81,6 @@ namespace
         Real const diag0 = diag - gamma;               // first row modified for Sherman-Morrison
         Real const diag_last = diag + (1.0_rt / diag); // last row modified for Sherman-Morrison
         Real const diag_inv = 1.0_rt / diag;
-
-        field.ParallelCopy(rhs, 0, 0, 1);
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
         {
@@ -277,6 +278,8 @@ namespace
             {
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
+
+            Gpu::streamSynchronizeAll();
         }
     }
 } // namespace
@@ -434,6 +437,8 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     copyFields(bfields_x, bfields, period);
     MultiFab rhs_ez = buildRhsEz1(efields_x, bfields_x, dt);
 
+    Gpu::streamSynchronizeAll();
+
     solveImplicitEx1(efields_y[0], rhs_ex, dt);
     solveImplicitEy1(efields_z[1], rhs_ey, dt);
     solveImplicitEz1(efields_x[2], rhs_ez, dt);
@@ -452,6 +457,7 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     stepBz(bfields[2], efields[0], eold[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
+    Gpu::streamSynchronizeAll();
 }
 
 void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
@@ -480,6 +486,8 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     copyFields(bfields_y, bfields, period);
     MultiFab rhs_ez = buildRhsEz2(efields_y, bfields_y, dt);
 
+    Gpu::streamSynchronizeAll();
+
     solveImplicitEx2(efields_z[0], rhs_ex, dt);
     solveImplicitEy2(efields_x[1], rhs_ey, dt);
     solveImplicitEz2(efields_y[2], rhs_ez, dt);
@@ -498,6 +506,7 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     stepBz(bfields[2], eold[0], efields[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
+    Gpu::streamSynchronizeAll();
 }
 
 MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
@@ -821,7 +830,7 @@ void ADI::stepBx(MultiFab &bx_dst, MultiFab const &ey_src,
                 { bx[b](i, j, k) +=
                       halfdt * (dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k)) -
                                 dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k))); });
-    Gpu::streamSynchronize();
+    Gpu::streamSynchronizeAll();
 }
 
 void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
@@ -838,7 +847,7 @@ void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
                 { by[b](i, j, k) +=
                       halfdt * (dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k)) -
                                 dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k))); });
-    Gpu::streamSynchronize();
+    Gpu::streamSynchronizeAll();
 }
 
 void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
@@ -855,5 +864,5 @@ void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
                 { bz[b](i, j, k) +=
                       halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -
                                 dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k))); });
-    Gpu::streamSynchronize();
+    Gpu::streamSynchronizeAll();
 }
