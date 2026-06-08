@@ -3,7 +3,7 @@
 #include "init.H"
 #include "util.H"
 
-#include <AMReX_GpuContainers.H>
+#include <AMReX_FArrayBox.H>
 #include <AMReX_MFIter.H>
 #include <AMReX_ParmParse.H>
 
@@ -56,80 +56,6 @@ namespace
         return copies;
     }
 
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE void solveTridiagonal(Real const *a,
-                                                                   Real const *b,
-                                                                   Real const *c,
-                                                                   Real const *rhs,
-                                                                   Real *x,
-                                                                   Real *cprime,
-                                                                   Real *dprime,
-                                                                   int n)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            dprime[i] = rhs[i];
-        }
-        Real denom = b[0];
-        cprime[0] = c[0] / denom;
-        dprime[0] /= denom;
-
-        for (int i = 1; i < n; ++i)
-        {
-            denom = b[i] - a[i] * cprime[i - 1];
-            cprime[i] = (i < n - 1) ? c[i] / denom : 0.0_rt;
-            dprime[i] = (dprime[i] - a[i] * dprime[i - 1]) / denom;
-        }
-
-        x[n - 1] = dprime[n - 1];
-        for (int i = n - 2; i >= 0; --i)
-        {
-            x[i] = dprime[i] - cprime[i] * x[i + 1];
-        }
-    }
-
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE void solveCyclicTridiagonal(Real const *a,
-                                                                         Real const *b,
-                                                                         Real const *c,
-                                                                         Real alpha,
-                                                                         Real beta,
-                                                                         Real const *rhs,
-                                                                         Real *x,
-                                                                         Real *bb,
-                                                                         Real *u,
-                                                                         Real *z,
-                                                                         Real *cprime,
-                                                                         Real *dprime,
-                                                                         int n)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            bb[i] = b[i];
-            u[i] = 0.0_rt;
-        }
-        Real const gamma = -b[0];
-
-        bb[0] -= gamma;
-        bb[n - 1] -= alpha * beta / gamma;
-
-        u[0] = gamma;
-        u[n - 1] = alpha;
-
-        solveTridiagonal(a, bb, c, rhs, x, cprime, dprime, n);
-        solveTridiagonal(a, bb, c, u, z, cprime, dprime, n);
-
-        // Applying Sherman-Morrison formula
-        // To solve Ax = b
-        // Tx = b, Tz = u
-        // x -= zv'x / (1 + v'z)
-        Real const denom = 1.0_rt + z[0] + beta * z[n - 1] / gamma;
-        Real const fact = (x[0] + beta * x[n - 1] / gamma) / denom;
-
-        for (int i = 0; i < n; ++i)
-        {
-            x[i] -= fact * z[i];
-        }
-    }
-
     void solvePeriodicNodalLines(MultiFab &field,
                                  MultiFab const &rhs,
                                  int solve_dir,
@@ -146,17 +72,11 @@ namespace
             (solver_name + " requires at least three unique points along the implicit direction")
                 .c_str());
 
-        Gpu::DeviceVector<Real> da(nsolve);
-        Gpu::DeviceVector<Real> db(nsolve);
-        Gpu::DeviceVector<Real> dc(nsolve);
-        Real *a = da.data();
-        Real *b = db.data();
-        Real *c = dc.data();
-        ParallelFor(nsolve, [=] AMREX_GPU_DEVICE(int i) noexcept
-                    {
-            a[i] = (i == 0) ? 0.0_rt : -1.0_rt;
-            b[i] = diag;
-            c[i] = (i == nsolve - 1) ? 0.0_rt : -1.0_rt; });
+        int const hi_unique = hi - 1; // unique periodic unknowns are [lo, hi-1]
+        Real const gamma = -diag;
+        Real const diag0 = diag - gamma;                // first row modified for Sherman-Morrison
+        Real const diag_last = diag + (1.0_rt / diag); // last row modified for Sherman-Morrison
+        Real const diag_inv = 1.0_rt / diag;
 
         field.ParallelCopy(rhs, 0, 0, 1);
 
@@ -165,156 +85,200 @@ namespace
             Box const &bx = mfi.validbox();
             amrex::ignore_unused(solver_name);
             auto const &field_arr = field.array(mfi);
+            auto const &rhs_arr = rhs.const_array(mfi);
+            FArrayBox tridiag_workspace(bx, 2, The_Async_Arena());
+            auto const &scratch = tridiag_workspace.array();
 
             if (solve_dir == 0)
             {
                 auto const b2d = amrex::makeSlab(bx, 0, lo);
-                int const jlo = bx.smallEnd(1);
-                int const ny = bx.length(1);
-                int const klo = bx.smallEnd(2);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> d_rhs(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_sol(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_bb(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_u(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_z(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_cprime(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_dprime(nlines * nsolve);
-                Real *line_rhs_all = d_rhs.data();
-                Real *line_sol_all = d_sol.data();
-                Real *line_bb_all = d_bb.data();
-                Real *line_u_all = d_u.data();
-                Real *line_z_all = d_z.data();
-                Real *line_cprime_all = d_cprime.data();
-                Real *line_dprime_all = d_dprime.data();
+                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
+                {
+                    Real denom = diag0;
+                    scratch(lo, j, k, 0) = -1.0_rt / denom;    // c'
+                    field_arr(lo, j, k) = rhs_arr(lo, j, k) / denom; // d'
 
-                amrex::ParallelFor(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
-                                   {
-                    Long const line = static_cast<Long>(k - klo) * ny + (j - jlo);
-                    Long const offset = line * nsolve;
-                    Real *line_rhs = line_rhs_all + offset;
-                    Real *line_sol = line_sol_all + offset;
-                    Real *line_bb = line_bb_all + offset;
-                    Real *line_u = line_u_all + offset;
-                    Real *line_z = line_z_all + offset;
-                    Real *line_cprime = line_cprime_all + offset;
-                    Real *line_dprime = line_dprime_all + offset;
-
-                    for (int i = 0; i < nsolve; ++i)
+                    for (int i = lo + 1; i <= hi_unique; ++i)
                     {
-                        line_rhs[i] = field_arr(lo + i, j, k, 0);
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (i == hi_unique) ? diag_last : diag;
+                        Real const upper = (i == hi_unique) ? 0.0_rt : -1.0_rt;
+
+                        denom = diag_i - lower * scratch(i - 1, j, k, 0);
+                        scratch(i, j, k, 0) = upper / denom; // c'
+                        field_arr(i, j, k) =
+                            (rhs_arr(i, j, k) - lower * field_arr(i - 1, j, k)) / denom;
                     }
 
-                    solveCyclicTridiagonal(a, b, c, -1.0_rt, -1.0_rt, line_rhs, line_sol,
-                                           line_bb, line_u, line_z, line_cprime, line_dprime, nsolve);
-
-                    for (int i = 0; i < nsolve; ++i)
+                    for (int i = hi_unique - 1; i >= lo; --i)
                     {
-                        field_arr(lo + i, j, k, 0) = line_sol[i];
+                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i + 1, j, k);
                     }
-                    field_arr(hi, j, k, 0) = line_sol[0]; });
+
+                    // Second Thomas solve for z in Sherman-Morrison correction.
+                    denom = diag0;
+                    scratch(lo, j, k, 0) = -1.0_rt / denom; // c'
+                    scratch(lo, j, k, 1) = gamma / denom;   // z
+
+                    for (int i = lo + 1; i <= hi_unique; ++i)
+                    {
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (i == hi_unique) ? diag_last : diag;
+                        Real const upper = (i == hi_unique) ? 0.0_rt : -1.0_rt;
+                        Real const u_i = (i == hi_unique) ? -1.0_rt : 0.0_rt;
+
+                        denom = diag_i - lower * scratch(i - 1, j, k, 0);
+                        scratch(i, j, k, 0) = upper / denom; // c'
+                        scratch(i, j, k, 1) =
+                            (u_i - lower * scratch(i - 1, j, k, 1)) / denom; // z
+                    }
+
+                    for (int i = hi_unique - 1; i >= lo; --i)
+                    {
+                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i + 1, j, k, 1);
+                    }
+
+                    Real const sm_denom =
+                        1.0_rt + scratch(lo, j, k, 1) + scratch(hi_unique, j, k, 1) * diag_inv;
+                    Real const fact =
+                        (field_arr(lo, j, k) + field_arr(hi_unique, j, k) * diag_inv) / sm_denom;
+
+                    for (int i = lo; i <= hi_unique; ++i)
+                    {
+                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
+                    }
+
+                    field_arr(hi, j, k) = field_arr(lo, j, k);
+                });
             }
             else if (solve_dir == 1)
             {
                 auto const b2d = amrex::makeSlab(bx, 1, lo);
-                int const ilo = bx.smallEnd(0);
-                int const nx = bx.length(0);
-                int const klo = bx.smallEnd(2);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> d_rhs(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_sol(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_bb(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_u(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_z(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_cprime(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_dprime(nlines * nsolve);
-                Real *line_rhs_all = d_rhs.data();
-                Real *line_sol_all = d_sol.data();
-                Real *line_bb_all = d_bb.data();
-                Real *line_u_all = d_u.data();
-                Real *line_z_all = d_z.data();
-                Real *line_cprime_all = d_cprime.data();
-                Real *line_dprime_all = d_dprime.data();
+                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
+                {
+                    Real denom = diag0;
+                    scratch(i, lo, k, 0) = -1.0_rt / denom;
+                    field_arr(i, lo, k) = rhs_arr(i, lo, k) / denom;
 
-                amrex::ParallelFor(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
-                                   {
-                    Long const line = static_cast<Long>(k - klo) * nx + (i - ilo);
-                    Long const offset = line * nsolve;
-                    Real *line_rhs = line_rhs_all + offset;
-                    Real *line_sol = line_sol_all + offset;
-                    Real *line_bb = line_bb_all + offset;
-                    Real *line_u = line_u_all + offset;
-                    Real *line_z = line_z_all + offset;
-                    Real *line_cprime = line_cprime_all + offset;
-                    Real *line_dprime = line_dprime_all + offset;
-
-                    for (int j = 0; j < nsolve; ++j)
+                    for (int j = lo + 1; j <= hi_unique; ++j)
                     {
-                        line_rhs[j] = field_arr(i, lo + j, k, 0);
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (j == hi_unique) ? diag_last : diag;
+                        Real const upper = (j == hi_unique) ? 0.0_rt : -1.0_rt;
+
+                        denom = diag_i - lower * scratch(i, j - 1, k, 0);
+                        scratch(i, j, k, 0) = upper / denom;
+                        field_arr(i, j, k) =
+                            (rhs_arr(i, j, k) - lower * field_arr(i, j - 1, k)) / denom;
                     }
 
-                    solveCyclicTridiagonal(a, b, c, -1.0_rt, -1.0_rt, line_rhs, line_sol,
-                                           line_bb, line_u, line_z, line_cprime, line_dprime, nsolve);
-
-                    for (int j = 0; j < nsolve; ++j)
+                    for (int j = hi_unique - 1; j >= lo; --j)
                     {
-                        field_arr(i, lo + j, k, 0) = line_sol[j];
+                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i, j + 1, k);
                     }
-                    field_arr(i, hi, k, 0) = line_sol[0]; });
+
+                    denom = diag0;
+                    scratch(i, lo, k, 0) = -1.0_rt / denom;
+                    scratch(i, lo, k, 1) = gamma / denom;
+
+                    for (int j = lo + 1; j <= hi_unique; ++j)
+                    {
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (j == hi_unique) ? diag_last : diag;
+                        Real const upper = (j == hi_unique) ? 0.0_rt : -1.0_rt;
+                        Real const u_i = (j == hi_unique) ? -1.0_rt : 0.0_rt;
+
+                        denom = diag_i - lower * scratch(i, j - 1, k, 0);
+                        scratch(i, j, k, 0) = upper / denom;
+                        scratch(i, j, k, 1) =
+                            (u_i - lower * scratch(i, j - 1, k, 1)) / denom;
+                    }
+
+                    for (int j = hi_unique - 1; j >= lo; --j)
+                    {
+                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i, j + 1, k, 1);
+                    }
+
+                    Real const sm_denom =
+                        1.0_rt + scratch(i, lo, k, 1) + scratch(i, hi_unique, k, 1) * diag_inv;
+                    Real const fact =
+                        (field_arr(i, lo, k) + field_arr(i, hi_unique, k) * diag_inv) / sm_denom;
+
+                    for (int j = lo; j <= hi_unique; ++j)
+                    {
+                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
+                    }
+
+                    field_arr(i, hi, k) = field_arr(i, lo, k);
+                });
             }
             else if (solve_dir == 2)
             {
                 auto const b2d = amrex::makeSlab(bx, 2, lo);
-                int const ilo = bx.smallEnd(0);
-                int const nx = bx.length(0);
-                int const jlo = bx.smallEnd(1);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> d_rhs(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_sol(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_bb(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_u(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_z(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_cprime(nlines * nsolve);
-                Gpu::DeviceVector<Real> d_dprime(nlines * nsolve);
-                Real *line_rhs_all = d_rhs.data();
-                Real *line_sol_all = d_sol.data();
-                Real *line_bb_all = d_bb.data();
-                Real *line_u_all = d_u.data();
-                Real *line_z_all = d_z.data();
-                Real *line_cprime_all = d_cprime.data();
-                Real *line_dprime_all = d_dprime.data();
+                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+                {
+                    Real denom = diag0;
+                    scratch(i, j, lo, 0) = -1.0_rt / denom;
+                    field_arr(i, j, lo) = rhs_arr(i, j, lo) / denom;
 
-                amrex::ParallelFor(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                                   {
-                    Long const line = static_cast<Long>(j - jlo) * nx + (i - ilo);
-                    Long const offset = line * nsolve;
-                    Real *line_rhs = line_rhs_all + offset;
-                    Real *line_sol = line_sol_all + offset;
-                    Real *line_bb = line_bb_all + offset;
-                    Real *line_u = line_u_all + offset;
-                    Real *line_z = line_z_all + offset;
-                    Real *line_cprime = line_cprime_all + offset;
-                    Real *line_dprime = line_dprime_all + offset;
-
-                    for (int k = 0; k < nsolve; ++k)
+                    for (int k = lo + 1; k <= hi_unique; ++k)
                     {
-                        line_rhs[k] = field_arr(i, j, lo + k, 0);
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (k == hi_unique) ? diag_last : diag;
+                        Real const upper = (k == hi_unique) ? 0.0_rt : -1.0_rt;
+
+                        denom = diag_i - lower * scratch(i, j, k - 1, 0);
+                        scratch(i, j, k, 0) = upper / denom;
+                        field_arr(i, j, k) =
+                            (rhs_arr(i, j, k) - lower * field_arr(i, j, k - 1)) / denom;
                     }
 
-                    solveCyclicTridiagonal(a, b, c, -1.0_rt, -1.0_rt, line_rhs, line_sol,
-                                           line_bb, line_u, line_z, line_cprime, line_dprime, nsolve);
-
-                    for (int k = 0; k < nsolve; ++k)
+                    for (int k = hi_unique - 1; k >= lo; --k)
                     {
-                        field_arr(i, j, lo + k, 0) = line_sol[k];
+                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i, j, k + 1);
                     }
-                    field_arr(i, j, hi, 0) = line_sol[0]; });
+
+                    denom = diag0;
+                    scratch(i, j, lo, 0) = -1.0_rt / denom;
+                    scratch(i, j, lo, 1) = gamma / denom;
+
+                    for (int k = lo + 1; k <= hi_unique; ++k)
+                    {
+                        Real const lower = -1.0_rt;
+                        Real const diag_i = (k == hi_unique) ? diag_last : diag;
+                        Real const upper = (k == hi_unique) ? 0.0_rt : -1.0_rt;
+                        Real const u_i = (k == hi_unique) ? -1.0_rt : 0.0_rt;
+
+                        denom = diag_i - lower * scratch(i, j, k - 1, 0);
+                        scratch(i, j, k, 0) = upper / denom;
+                        scratch(i, j, k, 1) =
+                            (u_i - lower * scratch(i, j, k - 1, 1)) / denom;
+                    }
+
+                    for (int k = hi_unique - 1; k >= lo; --k)
+                    {
+                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i, j, k + 1, 1);
+                    }
+
+                    Real const sm_denom =
+                        1.0_rt + scratch(i, j, lo, 1) + scratch(i, j, hi_unique, 1) * diag_inv;
+                    Real const fact =
+                        (field_arr(i, j, lo) + field_arr(i, j, hi_unique) * diag_inv) / sm_denom;
+
+                    for (int k = lo; k <= hi_unique; ++k)
+                    {
+                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
+                    }
+
+                    field_arr(i, j, hi) = field_arr(i, j, lo);
+                });
             }
             else
             {
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
         }
+
     }
 } // namespace
 
@@ -445,11 +409,11 @@ void ADI::evolve()
     }
 }
 
-void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
-                           Array<MultiFab, AMREX_SPACEDIM> &bfields,
-                           FieldArray &efields_x, FieldArray &efields_y,
-                           FieldArray &efields_z, FieldArray &bfields_x,
-                           FieldArray &bfields_y, FieldArray &bfields_z,
+void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
+                           Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                           FieldArray& efields_x, FieldArray& efields_y,
+                           FieldArray& efields_z, FieldArray& bfields_x,
+                           FieldArray& bfields_y, FieldArray& bfields_z,
                            Real dt)
 {
     // eq:adi-first-half-amrex — implicit E along y,z,x; explicit B at n+1/2
@@ -491,11 +455,11 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     amrex::FillBoundary(bfield_ptrs, period);
 }
 
-void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
-                            Array<MultiFab, AMREX_SPACEDIM> &bfields,
-                            FieldArray &efields_x, FieldArray &efields_y,
-                            FieldArray &efields_z, FieldArray &bfields_x,
-                            FieldArray &bfields_y, FieldArray &bfields_z,
+void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM>& efields,
+                            Array<MultiFab, AMREX_SPACEDIM>& bfields,
+                            FieldArray& efields_x, FieldArray& efields_y,
+                            FieldArray& efields_z, FieldArray& bfields_x,
+                            FieldArray& bfields_y, FieldArray& bfields_z,
                             Real dt)
 {
     // eq:adi-second-half-amrex — implicit E along z,x,y; explicit B at n+1
@@ -537,8 +501,8 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     amrex::FillBoundary(bfield_ptrs, period);
 }
 
-MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ex row (vacuum), for tridiagonal solve along y.
@@ -569,19 +533,20 @@ MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &by_arr = bfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dyinv * (bz_arr(i, j, k) - bz_arr(i, j - 1, k)) -
                                 dzinv * (by_arr(i, j, k) - by_arr(i, j, k - 1));
             Real const dey_dx = dxinv * ((ey_arr(i + 1, j - 1, k) - ey_arr(i, j - 1, k)) -
                                          (ey_arr(i + 1, j, k) - ey_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ex * ex_arr(i, j, k) + coef_b * curl_b + coef_ey * dey_dx; });
+            rhs_arr(i, j, k) = coef_ex * ex_arr(i, j, k) + coef_b * curl_b + coef_ey * dey_dx;
+        });
     }
 
     return rhs;
 }
 
-MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ey row (vacuum), for tridiagonal solve along z.
@@ -612,19 +577,20 @@ MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &bz_arr = bfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dzinv * (bx_arr(i, j, k) - bx_arr(i, j, k - 1)) -
                                 dxinv * (bz_arr(i, j, k) - bz_arr(i - 1, j, k));
             Real const dez_dy = dyinv * ((ez_arr(i, j + 1, k - 1) - ez_arr(i, j, k - 1)) -
                                          (ez_arr(i, j + 1, k) - ez_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ey * ey_arr(i, j, k) + coef_b * curl_b + coef_ez * dez_dy; });
+            rhs_arr(i, j, k) = coef_ey * ey_arr(i, j, k) + coef_b * curl_b + coef_ez * dez_dy;
+        });
     }
 
     return rhs;
 }
 
-MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-first-half-amrex Ez row (vacuum), for tridiagonal solve along x.
@@ -655,12 +621,13 @@ MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &bx_arr = bfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dxinv * (by_arr(i, j, k) - by_arr(i - 1, j, k)) -
                                 dyinv * (bx_arr(i, j, k) - bx_arr(i, j - 1, k));
             Real const dex_dz = dzinv * ((ex_arr(i - 1, j, k + 1) - ex_arr(i - 1, j, k)) -
                                          (ex_arr(i, j, k + 1) - ex_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ez * ez_arr(i, j, k) + coef_b * curl_b + coef_ex * dex_dz; });
+            rhs_arr(i, j, k) = coef_ez * ez_arr(i, j, k) + coef_b * curl_b + coef_ex * dex_dz;
+        });
     }
 
     return rhs;
@@ -690,8 +657,8 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
     solvePeriodicNodalLines(ez, rhs, 0, diag, "solveImplicitEz1");
 }
 
-MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ex row (vacuum), for tridiagonal solve along z.
@@ -722,19 +689,20 @@ MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &by_arr = bfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dyinv * (bz_arr(i, j, k) - bz_arr(i, j - 1, k)) -
                                 dzinv * (by_arr(i, j, k) - by_arr(i, j, k - 1));
             Real const dez_dx = dxinv * ((ez_arr(i + 1, j, k - 1) - ez_arr(i, j, k - 1)) -
                                          (ez_arr(i + 1, j, k) - ez_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ex * ex_arr(i, j, k) + coef_b * curl_b + coef_ez * dez_dx; });
+            rhs_arr(i, j, k) = coef_ex * ex_arr(i, j, k) + coef_b * curl_b + coef_ez * dez_dx;
+        });
     }
 
     return rhs;
 }
 
-MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ey row (vacuum), for tridiagonal solve along x.
@@ -765,19 +733,20 @@ MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &bz_arr = bfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dzinv * (bx_arr(i, j, k) - bx_arr(i, j, k - 1)) -
                                 dxinv * (bz_arr(i, j, k) - bz_arr(i - 1, j, k));
             Real const dex_dy = dyinv * ((ex_arr(i - 1, j + 1, k) - ex_arr(i - 1, j, k)) -
                                          (ex_arr(i, j + 1, k) - ex_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ey * ey_arr(i, j, k) + coef_b * curl_b + coef_ex * dex_dy; });
+            rhs_arr(i, j, k) = coef_ey * ey_arr(i, j, k) + coef_b * curl_b + coef_ex * dex_dy;
+        });
     }
 
     return rhs;
 }
 
-MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const& efields,
+                          Array<MultiFab, AMREX_SPACEDIM> const& bfields,
                           Real dt) const
 {
     // RHS of eq:adi-second-half-amrex Ez row (vacuum), for tridiagonal solve along y.
@@ -808,12 +777,13 @@ MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &bx_arr = bfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
-                    {
+                      {
             Real const curl_b = dxinv * (by_arr(i, j, k) - by_arr(i - 1, j, k)) -
                                 dyinv * (bx_arr(i, j, k) - bx_arr(i, j - 1, k));
             Real const dey_dz = dzinv * ((ey_arr(i, j - 1, k + 1) - ey_arr(i, j - 1, k)) -
                                          (ey_arr(i, j, k + 1) - ey_arr(i, j, k)));
-            rhs_arr(i, j, k) = coef_ez * ez_arr(i, j, k) + coef_b * curl_b + coef_ey * dey_dz; });
+            rhs_arr(i, j, k) = coef_ez * ez_arr(i, j, k) + coef_b * curl_b + coef_ey * dey_dz;
+        });
     }
 
     return rhs;
@@ -855,9 +825,11 @@ void ADI::stepBx(MultiFab &bx_dst, MultiFab const &ey_src,
     auto const &bx = bx_dst.arrays();
 
     ParallelFor(bx_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                { bx[b](i, j, k) +=
-                      halfdt * (dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k)) -
-                                dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k))); });
+                {
+        bx[b](i, j, k) +=
+            halfdt * (dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k)) -
+                      dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k)));
+    });
     Gpu::streamSynchronize();
 }
 
@@ -872,9 +844,11 @@ void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
     auto const &by = by_dst.arrays();
 
     ParallelFor(by_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                { by[b](i, j, k) +=
-                      halfdt * (dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k)) -
-                                dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k))); });
+                {
+        by[b](i, j, k) +=
+            halfdt * (dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k)) -
+                      dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k)));
+    });
     Gpu::streamSynchronize();
 }
 
@@ -889,8 +863,10 @@ void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
     auto const &bz = bz_dst.arrays();
 
     ParallelFor(bz_dst, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                { bz[b](i, j, k) +=
-                      halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -
-                                dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k))); });
+                {
+        bz[b](i, j, k) +=
+            halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -
+                      dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k)));
+    });
     Gpu::streamSynchronize();
 }
