@@ -1,5 +1,6 @@
 #include "util.H"
 
+#include <AMReX_GpuContainers.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_Utility.H>
@@ -57,28 +58,27 @@ namespace
         const int nz = hi[2] - lo[2] + 1;
         constexpr int ncomp = 6;
 
-        Vector<double> data(static_cast<std::size_t>(nx) * ny * nz * ncomp, 0.0);
+        std::size_t const nvals = static_cast<std::size_t>(nx) * ny * nz * ncomp;
+        Gpu::DeviceVector<double> d_data(nvals);
+        double *data_d = d_data.data();
 
         for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
         {
             const Box &bx = mfi.validbox();
             auto const &arr = plotmf.const_array(mfi);
-            for (int k = bx.smallEnd(2); k <= bx.bigEnd(2); ++k)
+            ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
-                for (int j = bx.smallEnd(1); j <= bx.bigEnd(1); ++j)
+                const std::size_t base =
+                    (static_cast<std::size_t>(i - lo[0]) * ny + (j - lo[1])) * nz + (k - lo[2]);
+                for (int c = 0; c < ncomp; ++c)
                 {
-                    for (int i = bx.smallEnd(0); i <= bx.bigEnd(0); ++i)
-                    {
-                        const std::size_t base =
-                            (static_cast<std::size_t>(i - lo[0]) * ny + (j - lo[1])) * nz + (k - lo[2]);
-                        for (int c = 0; c < ncomp; ++c)
-                        {
-                            data[base * ncomp + c] = static_cast<double>(arr(i, j, k, c));
-                        }
-                    }
+                    data_d[base * ncomp + c] = static_cast<double>(arr(i, j, k, c));
                 }
-            }
+            });
         }
+
+        Vector<double> data(nvals);
+        Gpu::copy(Gpu::deviceToHost, d_data.begin(), d_data.end(), data.begin());
 
         if (ParallelDescriptor::MyProc() != 0)
         {
