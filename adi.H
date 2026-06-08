@@ -1,11 +1,11 @@
 #ifndef ADI_H_
 #define ADI_H_
 
+#include <string>
+
 #include <AMReX_Array.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_MultiFab.H>
-
-#include <string>
 
 class ADI
 {
@@ -18,27 +18,27 @@ public:
     void evolve();
 
     // First ADI half-step (eq:adi-first-half-amrex in notes/adi.tex)
-    void adiFirstHalfStep(FieldArray& efields, FieldArray& bfields,
-                          FieldArray& efields_x, FieldArray& efields_y,
-                          FieldArray& efields_z, FieldArray& bfields_x,
-                          FieldArray& bfields_y, FieldArray& bfields_z,
+    void adiFirstHalfStep(FieldArray &efields, FieldArray &bfields,
+                          FieldArray &efields_x, FieldArray &efields_y,
+                          FieldArray &efields_z, FieldArray &bfields_x,
+                          FieldArray &bfields_y, FieldArray &bfields_z,
                           amrex::Real dt);
     // Second ADI half-step (eq:adi-second-half-amrex in notes/adi.tex)
-    void adiSecondHalfStep(FieldArray& efields, FieldArray& bfields,
-                           FieldArray& efields_x, FieldArray& efields_y,
-                           FieldArray& efields_z, FieldArray& bfields_x,
-                           FieldArray& bfields_y, FieldArray& bfields_z,
+    void adiSecondHalfStep(FieldArray &efields, FieldArray &bfields,
+                           FieldArray &efields_x, FieldArray &efields_y,
+                           FieldArray &efields_z, FieldArray &bfields_x,
+                           FieldArray &bfields_y, FieldArray &bfields_z,
                            amrex::Real dt);
 
     // buildRhs / solveImplicit stubs (to be filled in later)
-    amrex::MultiFab buildRhsEx1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEx1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
-    amrex::MultiFab buildRhsEy1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEy1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
-    amrex::MultiFab buildRhsEz1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEz1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
     void solveImplicitEx1(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
@@ -47,14 +47,14 @@ public:
     void solveImplicitEz1(amrex::MultiFab &ez, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
 
-    amrex::MultiFab buildRhsEx2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEx2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
-    amrex::MultiFab buildRhsEy2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEy2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
-    amrex::MultiFab buildRhsEz2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const& bfields,
+    amrex::MultiFab buildRhsEz2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
                                 amrex::Real dt) const;
     void solveImplicitEx2(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
