@@ -63,8 +63,8 @@ public:
     void solveImplicitEz2(amrex::MultiFab &ez, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
 
-private:
-    // Explicit B += (dt/2) curl E with the old/new split used by the ADI half-step.
+    // Internal helper updates for B += (dt/2) curl E.
+    // Must be public for NVCC extended device lambda compatibility.
     void stepBx(amrex::MultiFab &bx, amrex::MultiFab const &ey_src,
                 amrex::MultiFab const &ez_src,
                 amrex::Real dt);
@@ -75,6 +75,7 @@ private:
                 amrex::MultiFab const &ey_src,
                 amrex::Real dt);
 
+private:
     amrex::IntVect m_n_cells;
     int m_max_grid_size = 64;
     amrex::Geometry m_geom;
