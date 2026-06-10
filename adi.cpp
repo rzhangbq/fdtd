@@ -18,7 +18,7 @@ namespace
     {
         return MultiFab(field.boxArray(), field.DistributionMap(), 1, 0);
     }
-    
+
     void definePencilFields(ADI::FieldArray &pencils,
                             ADI::FieldArray const &fields,
                             BoxArray const &base_ba,
@@ -31,7 +31,7 @@ namespace
             pencils[idim].define(ba, dm, fields[idim].nComp(), fields[idim].nGrowVect());
         }
     }
-        
+
     void copyFields(ADI::FieldArray &dst,
                     ADI::FieldArray const &src,
                     Periodicity const &period)
@@ -279,7 +279,6 @@ namespace
             {
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
-
         }
     }
 } // namespace

@@ -113,7 +113,6 @@ void FDTD::evolve()
                     { by[b](i, j, k) -= halfdt * (dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k)) - dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k))); });
         ParallelFor(m_bfields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     { bz[b](i, j, k) -= halfdt * (dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k)) - dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k))); });
-        Gpu::streamSynchronize();
 
         amrex::FillBoundary(bfields, period);
 
@@ -123,7 +122,6 @@ void FDTD::evolve()
                     { ey[b](i, j, k) += c2dt * (dxinv[2] * (bx[b](i, j, k) - bx[b](i, j, k - 1)) - dxinv[0] * (bz[b](i, j, k) - bz[b](i - 1, j, k))); });
         ParallelFor(m_efields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     { ez[b](i, j, k) += c2dt * (dxinv[0] * (by[b](i, j, k) - by[b](i - 1, j, k)) - dxinv[1] * (bx[b](i, j, k) - bx[b](i, j - 1, k))); });
-        Gpu::streamSynchronize();
 
         amrex::FillBoundary(efields, period);
 
@@ -133,7 +131,6 @@ void FDTD::evolve()
                     { by[b](i, j, k) -= halfdt * (dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k)) - dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k))); });
         ParallelFor(m_bfields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     { bz[b](i, j, k) -= halfdt * (dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k)) - dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k))); });
-        Gpu::streamSynchronize();
 
         time += dt;
 
