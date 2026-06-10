@@ -77,8 +77,6 @@ namespace
             });
         }
 
-        // Ensure device writes are complete before copying to host.
-        Gpu::streamSynchronizeAll();
         Vector<double> data(nvals);
         Gpu::copy(Gpu::deviceToHost, d_data.begin(), d_data.end(), data.begin());
         Gpu::streamSynchronizeAll();

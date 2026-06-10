@@ -47,7 +47,6 @@ namespace
         {
             dst[idim].OverrideSync(period);
         }
-        Gpu::streamSynchronizeAll();
     }
 
     Array<MultiFab, AMREX_SPACEDIM> copyFieldsWithGhosts(
@@ -283,7 +282,6 @@ namespace
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
 
-            Gpu::streamSynchronizeAll();
         }
     }
 } // namespace
@@ -395,7 +393,6 @@ void ADI::evolve()
             m_efields[idim].OverrideSync(period);
             m_bfields[idim].OverrideSync(period);
         }
-        Gpu::streamSynchronizeAll();
     }
 
     if (m_plot_int > 0)
@@ -447,8 +444,6 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     copyFields(bfields_x, bfields, period);
     MultiFab rhs_ez = buildRhsEz1(efields_x, bfields_x, dt);
 
-    Gpu::streamSynchronizeAll();
-
     solveImplicitEx1(efields_y[0], rhs_ex, dt);
     solveImplicitEy1(efields_z[1], rhs_ey, dt);
     solveImplicitEz1(efields_x[2], rhs_ez, dt);
@@ -465,7 +460,6 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     {
         efields[idim].OverrideSync(period);
     }
-    Gpu::streamSynchronizeAll();
 
     stepBx(bfields[0], efields[1], eold[2], dt);
     stepBy(bfields[1], efields[2], eold[0], dt);
@@ -476,7 +470,6 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     {
         bfields[idim].OverrideSync(period);
     }
-    Gpu::streamSynchronizeAll();
 }
 
 void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
@@ -505,8 +498,6 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     copyFields(bfields_y, bfields, period);
     MultiFab rhs_ez = buildRhsEz2(efields_y, bfields_y, dt);
 
-    Gpu::streamSynchronizeAll();
-
     solveImplicitEx2(efields_z[0], rhs_ex, dt);
     solveImplicitEy2(efields_x[1], rhs_ey, dt);
     solveImplicitEz2(efields_y[2], rhs_ez, dt);
@@ -523,7 +514,6 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     {
         efields[idim].OverrideSync(period);
     }
-    Gpu::streamSynchronizeAll();
 
     stepBx(bfields[0], eold[1], efields[2], dt);
     stepBy(bfields[1], eold[2], efields[0], dt);
@@ -534,7 +524,6 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
     {
         bfields[idim].OverrideSync(period);
     }
-    Gpu::streamSynchronizeAll();
 }
 
 MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
@@ -858,7 +847,6 @@ void ADI::stepBx(MultiFab &bx_dst, MultiFab const &ey_src,
                 { bx[b](i, j, k) +=
                       halfdt * (dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k)) -
                                 dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k))); });
-    Gpu::streamSynchronizeAll();
 }
 
 void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
@@ -875,7 +863,6 @@ void ADI::stepBy(MultiFab &by_dst, MultiFab const &ez_src,
                 { by[b](i, j, k) +=
                       halfdt * (dxinv[0] * (ez[b](i + 1, j, k) - ez[b](i, j, k)) -
                                 dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k))); });
-    Gpu::streamSynchronizeAll();
 }
 
 void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
@@ -892,5 +879,4 @@ void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
                 { bz[b](i, j, k) +=
                       halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -
                                 dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k))); });
-    Gpu::streamSynchronizeAll();
 }

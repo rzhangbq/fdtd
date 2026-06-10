@@ -133,8 +133,6 @@ void InitSetupFields(
         // For a standing wave at t=0, initialize B to zero and only seed E.
     }
 
-    Gpu::streamSynchronizeAll();
-
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
     Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
     amrex::FillBoundary(efield_ptrs, geom.periodicity());
