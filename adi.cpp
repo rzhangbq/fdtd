@@ -41,8 +41,6 @@ namespace
             dst[idim].ParallelCopy(src[idim], 0, 0, src[idim].nComp(),
                                    IntVect(0), dst[idim].nGrowVect(), period);
         }
-        Vector<MultiFab *> ptrs{AMREX_D_DECL(&dst[0], &dst[1], &dst[2])};
-        FillBoundary(ptrs, period);
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
         {
             dst[idim].OverrideSync(period);
