@@ -81,6 +81,7 @@ namespace
         Gpu::streamSynchronizeAll();
         Vector<double> data(nvals);
         Gpu::copy(Gpu::deviceToHost, d_data.begin(), d_data.end(), data.begin());
+        Gpu::streamSynchronizeAll();
 
         if (ParallelDescriptor::MyProc() != 0)
         {

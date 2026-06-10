@@ -43,6 +43,10 @@ namespace
         }
         Vector<MultiFab *> ptrs{AMREX_D_DECL(&dst[0], &dst[1], &dst[2])};
         FillBoundary(ptrs, period);
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+        {
+            dst[idim].OverrideSync(period);
+        }
         Gpu::streamSynchronizeAll();
     }
 
@@ -386,6 +390,12 @@ void ADI::evolve()
         Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
         amrex::FillBoundary(efield_ptrs, period);
         amrex::FillBoundary(bfield_ptrs, period);
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+        {
+            m_efields[idim].OverrideSync(period);
+            m_bfields[idim].OverrideSync(period);
+        }
+        Gpu::streamSynchronizeAll();
     }
 
     if (m_plot_int > 0)
@@ -451,12 +461,21 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        efields[idim].OverrideSync(period);
+    }
+    Gpu::streamSynchronizeAll();
 
     stepBx(bfields[0], efields[1], eold[2], dt);
     stepBy(bfields[1], efields[2], eold[0], dt);
     stepBz(bfields[2], efields[0], eold[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        bfields[idim].OverrideSync(period);
+    }
     Gpu::streamSynchronizeAll();
 }
 
@@ -500,12 +519,21 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        efields[idim].OverrideSync(period);
+    }
+    Gpu::streamSynchronizeAll();
 
     stepBx(bfields[0], eold[1], efields[2], dt);
     stepBy(bfields[1], eold[2], efields[0], dt);
     stepBz(bfields[2], eold[0], efields[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        bfields[idim].OverrideSync(period);
+    }
     Gpu::streamSynchronizeAll();
 }
 
