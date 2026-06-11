@@ -41,10 +41,6 @@ namespace
             dst[idim].ParallelCopy(src[idim], 0, 0, src[idim].nComp(),
                                    IntVect(0), dst[idim].nGrowVect(), period);
         }
-        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-        {
-            dst[idim].OverrideSync(period);
-        }
     }
 
     Array<MultiFab, AMREX_SPACEDIM> copyFieldsWithGhosts(
@@ -453,20 +449,12 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        efields[idim].OverrideSync(period);
-    }
 
     stepBx(bfields[0], efields[1], eold[2], dt);
     stepBy(bfields[1], efields[2], eold[0], dt);
     stepBz(bfields[2], efields[0], eold[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        bfields[idim].OverrideSync(period);
-    }
 }
 
 void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
@@ -507,20 +495,12 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        efields[idim].OverrideSync(period);
-    }
 
     stepBx(bfields[0], eold[1], efields[2], dt);
     stepBy(bfields[1], eold[2], efields[0], dt);
     stepBz(bfields[2], eold[0], efields[1], dt);
 
     amrex::FillBoundary(bfield_ptrs, period);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        bfields[idim].OverrideSync(period);
-    }
 }
 
 MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
