@@ -137,4 +137,9 @@ void InitSetupFields(
     Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
     amrex::FillBoundary(efield_ptrs, geom.periodicity());
     amrex::FillBoundary(bfield_ptrs, geom.periodicity());
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        efields[idim].OverrideSync(geom.periodicity());
+        bfields[idim].OverrideSync(geom.periodicity());
+    }
 }

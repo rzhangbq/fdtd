@@ -381,11 +381,6 @@ void ADI::evolve()
         Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
         amrex::FillBoundary(efield_ptrs, period);
         amrex::FillBoundary(bfield_ptrs, period);
-        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-        {
-            m_efields[idim].OverrideSync(period);
-            m_bfields[idim].OverrideSync(period);
-        }
     }
 
     if (m_plot_int > 0)
