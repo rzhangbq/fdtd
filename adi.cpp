@@ -3,11 +3,12 @@
 #include "init.H"
 #include "util.H"
 
-#include <AMReX_FArrayBox.H>
+#include <AMReX_Gpu.H>
 #include <AMReX_MFIter.H>
 #include <AMReX_ParmParse.H>
 
 #include <cmath>
+#include <vector>
 
 using namespace amrex;
 
@@ -56,6 +57,85 @@ namespace
         return copies;
     }
 
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void solveTridiagonal(Real const *a,
+                          Real const *b,
+                          Real const *c,
+                          Real const *rhs,
+                          Real *x,
+                          Real *cprime,
+                          Real *dprime,
+                          int n) noexcept
+    {
+        AMREX_ALWAYS_ASSERT(n >= 2);
+
+        Real denom = b[0];
+        AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
+        cprime[0] = c[0] / denom;
+        dprime[0] = rhs[0] / denom;
+
+        for (int i = 1; i < n; ++i)
+        {
+            denom = b[i] - a[i] * cprime[i - 1];
+            AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
+            cprime[i] = (i < n - 1) ? c[i] / denom : 0.0_rt;
+            dprime[i] = (rhs[i] - a[i] * dprime[i - 1]) / denom;
+        }
+
+        x[n - 1] = dprime[n - 1];
+        for (int i = n - 2; i >= 0; --i)
+        {
+            x[i] = dprime[i] - cprime[i] * x[i + 1];
+        }
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void solveCyclicTridiagonal(Real const *a,
+                                Real const *b,
+                                Real const *c,
+                                Real alpha,
+                                Real beta,
+                                Real const *rhs,
+                                Real *x,
+                                Real *bb,
+                                Real *cprime,
+                                Real *dprime,
+                                Real *u,
+                                Real *z,
+                                int n) noexcept
+    {
+        AMREX_ALWAYS_ASSERT(n > 2);
+
+        Real const gamma = -b[0];
+        AMREX_ALWAYS_ASSERT(std::abs(gamma) > 0.0_rt);
+
+        for (int i = 0; i < n; ++i)
+        {
+            bb[i] = b[i];
+        }
+        bb[0] -= gamma;
+        bb[n - 1] -= alpha * beta / gamma;
+
+        solveTridiagonal(a, bb, c, rhs, x, cprime, dprime, n);
+
+        for (int i = 0; i < n; ++i)
+        {
+            u[i] = 0.0_rt;
+        }
+        u[0] = gamma;
+        u[n - 1] = alpha;
+        solveTridiagonal(a, bb, c, u, z, cprime, dprime, n);
+
+        Real const denom = 1.0_rt + z[0] + beta * z[n - 1] / gamma;
+        AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
+        Real const fact = (x[0] + beta * x[n - 1] / gamma) / denom;
+
+        for (int i = 0; i < n; ++i)
+        {
+            x[i] -= fact * z[i];
+        }
+    }
+
     void solvePeriodicNodalLines(MultiFab &field,
                                  MultiFab const &rhs,
                                  int solve_dir,
@@ -72,201 +152,137 @@ namespace
             (solver_name + " requires at least three unique points along the implicit direction")
                 .c_str());
 
-        int const hi_unique = hi - 1; // unique periodic unknowns are [lo, hi-1]
-        Real const gamma = -diag;
-        Real const diag0 = diag - gamma;               // first row modified for Sherman-Morrison
-        Real const diag_last = diag + (1.0_rt / diag); // last row modified for Sherman-Morrison
-        Real const diag_inv = 1.0_rt / diag;
+        std::vector<Real> a_h(nsolve, -1.0_rt);
+        std::vector<Real> b_h(nsolve, diag);
+        std::vector<Real> c_h(nsolve, -1.0_rt);
+        a_h[0] = 0.0_rt;
+        c_h[nsolve - 1] = 0.0_rt;
+
+        Gpu::DeviceVector<Real> a_d(nsolve);
+        Gpu::DeviceVector<Real> b_d(nsolve);
+        Gpu::DeviceVector<Real> c_d(nsolve);
+        Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_d.begin());
+        Gpu::copyAsync(Gpu::hostToDevice, b_h.begin(), b_h.end(), b_d.begin());
+        Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_d.begin());
+        Gpu::streamSynchronize();
+
+        Real const *a = a_d.data();
+        Real const *b = b_d.data();
+        Real const *c = c_d.data();
+        Real const alpha = -1.0_rt;
+        Real const beta = -1.0_rt;
+
+        field.ParallelCopy(rhs, 0, 0, 1);
+
+        constexpr int n_line_work = 6; // x, bb, cprime, dprime, u, z
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
         {
             Box const &bx = mfi.validbox();
             amrex::ignore_unused(solver_name);
             auto const &field_arr = field.array(mfi);
-            auto const &rhs_arr = rhs.const_array(mfi);
-            FArrayBox tridiag_workspace(bx, 2, The_Async_Arena());
-            auto const &scratch = tridiag_workspace.array();
 
             if (solve_dir == 0)
             {
-                auto const b2d = amrex::makeSlab(bx, 0, lo);
+                Box const b2d = amrex::makeSlab(bx, 0, lo);
+                Long const nlines = b2d.numPts();
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
+                Real *work = line_work.data();
+                int const jlo = b2d.smallEnd(1);
+                int const klo = b2d.smallEnd(2);
+                int const jlen = b2d.length(1);
+
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
                                       {
-                    Real denom = diag0;
-                    scratch(lo, j, k, 0) = -1.0_rt / denom;    // c'
-                    field_arr(lo, j, k) = rhs_arr(lo, j, k) / denom; // d'
+                    int const line_id = (j - jlo) + (k - klo) * jlen;
+                    Real *x = work + line_id * nsolve * n_line_work;
+                    Real *bb = x + nsolve;
+                    Real *cprime = bb + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *u = dprime + nsolve;
+                    Real *z = u + nsolve;
 
-                    for (int i = lo + 1; i <= hi_unique; ++i)
+                    for (int ii = 0; ii < nsolve; ++ii)
                     {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (i == hi_unique) ? diag_last : diag;
-                        Real const upper = (i == hi_unique) ? 0.0_rt : -1.0_rt;
-
-                        denom = diag_i - lower * scratch(i - 1, j, k, 0);
-                        scratch(i, j, k, 0) = upper / denom; // c'
-                        field_arr(i, j, k) =
-                            (rhs_arr(i, j, k) - lower * field_arr(i - 1, j, k)) / denom;
+                        x[ii] = field_arr(lo + ii, j, k);
                     }
 
-                    for (int i = hi_unique - 1; i >= lo; --i)
+                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
+                                           bb, cprime, dprime, u, z, nsolve);
+
+                    for (int ii = 0; ii < nsolve; ++ii)
                     {
-                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i + 1, j, k);
+                        field_arr(lo + ii, j, k) = x[ii];
                     }
-
-                    // Second Thomas solve for z in Sherman-Morrison correction.
-                    denom = diag0;
-                    scratch(lo, j, k, 0) = -1.0_rt / denom; // c'
-                    scratch(lo, j, k, 1) = gamma / denom;   // z
-
-                    for (int i = lo + 1; i <= hi_unique; ++i)
-                    {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (i == hi_unique) ? diag_last : diag;
-                        Real const upper = (i == hi_unique) ? 0.0_rt : -1.0_rt;
-                        Real const u_i = (i == hi_unique) ? -1.0_rt : 0.0_rt;
-
-                        denom = diag_i - lower * scratch(i - 1, j, k, 0);
-                        scratch(i, j, k, 0) = upper / denom; // c'
-                        scratch(i, j, k, 1) =
-                            (u_i - lower * scratch(i - 1, j, k, 1)) / denom; // z
-                    }
-
-                    for (int i = hi_unique - 1; i >= lo; --i)
-                    {
-                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i + 1, j, k, 1);
-                    }
-
-                    Real const sm_denom =
-                        1.0_rt + scratch(lo, j, k, 1) + scratch(hi_unique, j, k, 1) * diag_inv;
-                    Real const fact =
-                        (field_arr(lo, j, k) + field_arr(hi_unique, j, k) * diag_inv) / sm_denom;
-
-                    for (int i = lo; i <= hi_unique; ++i)
-                    {
-                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
-                    }
-
-                    field_arr(hi, j, k) = field_arr(lo, j, k); });
+                    field_arr(hi, j, k) = x[0]; });
             }
             else if (solve_dir == 1)
             {
-                auto const b2d = amrex::makeSlab(bx, 1, lo);
+                Box const b2d = amrex::makeSlab(bx, 1, lo);
+                Long const nlines = b2d.numPts();
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
+                Real *work = line_work.data();
+                int const ilo = b2d.smallEnd(0);
+                int const klo = b2d.smallEnd(2);
+                int const ilen = b2d.length(0);
+
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
                                       {
-                    Real denom = diag0;
-                    scratch(i, lo, k, 0) = -1.0_rt / denom;
-                    field_arr(i, lo, k) = rhs_arr(i, lo, k) / denom;
+                    int const line_id = (i - ilo) + (k - klo) * ilen;
+                    Real *x = work + line_id * nsolve * n_line_work;
+                    Real *bb = x + nsolve;
+                    Real *cprime = bb + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *u = dprime + nsolve;
+                    Real *z = u + nsolve;
 
-                    for (int j = lo + 1; j <= hi_unique; ++j)
+                    for (int jj = 0; jj < nsolve; ++jj)
                     {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (j == hi_unique) ? diag_last : diag;
-                        Real const upper = (j == hi_unique) ? 0.0_rt : -1.0_rt;
-
-                        denom = diag_i - lower * scratch(i, j - 1, k, 0);
-                        scratch(i, j, k, 0) = upper / denom;
-                        field_arr(i, j, k) =
-                            (rhs_arr(i, j, k) - lower * field_arr(i, j - 1, k)) / denom;
+                        x[jj] = field_arr(i, lo + jj, k);
                     }
 
-                    for (int j = hi_unique - 1; j >= lo; --j)
+                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
+                                           bb, cprime, dprime, u, z, nsolve);
+
+                    for (int jj = 0; jj < nsolve; ++jj)
                     {
-                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i, j + 1, k);
+                        field_arr(i, lo + jj, k) = x[jj];
                     }
-
-                    denom = diag0;
-                    scratch(i, lo, k, 0) = -1.0_rt / denom;
-                    scratch(i, lo, k, 1) = gamma / denom;
-
-                    for (int j = lo + 1; j <= hi_unique; ++j)
-                    {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (j == hi_unique) ? diag_last : diag;
-                        Real const upper = (j == hi_unique) ? 0.0_rt : -1.0_rt;
-                        Real const u_i = (j == hi_unique) ? -1.0_rt : 0.0_rt;
-
-                        denom = diag_i - lower * scratch(i, j - 1, k, 0);
-                        scratch(i, j, k, 0) = upper / denom;
-                        scratch(i, j, k, 1) =
-                            (u_i - lower * scratch(i, j - 1, k, 1)) / denom;
-                    }
-
-                    for (int j = hi_unique - 1; j >= lo; --j)
-                    {
-                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i, j + 1, k, 1);
-                    }
-
-                    Real const sm_denom =
-                        1.0_rt + scratch(i, lo, k, 1) + scratch(i, hi_unique, k, 1) * diag_inv;
-                    Real const fact =
-                        (field_arr(i, lo, k) + field_arr(i, hi_unique, k) * diag_inv) / sm_denom;
-
-                    for (int j = lo; j <= hi_unique; ++j)
-                    {
-                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
-                    }
-
-                    field_arr(i, hi, k) = field_arr(i, lo, k); });
+                    field_arr(i, hi, k) = x[0]; });
             }
             else if (solve_dir == 2)
             {
-                auto const b2d = amrex::makeSlab(bx, 2, lo);
+                Box const b2d = amrex::makeSlab(bx, 2, lo);
+                Long const nlines = b2d.numPts();
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
+                Real *work = line_work.data();
+                int const ilo = b2d.smallEnd(0);
+                int const jlo = b2d.smallEnd(1);
+                int const ilen = b2d.length(0);
+
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                                       {
-                    Real denom = diag0;
-                    scratch(i, j, lo, 0) = -1.0_rt / denom;
-                    field_arr(i, j, lo) = rhs_arr(i, j, lo) / denom;
+                    int const line_id = (i - ilo) + (j - jlo) * ilen;
+                    Real *x = work + line_id * nsolve * n_line_work;
+                    Real *bb = x + nsolve;
+                    Real *cprime = bb + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *u = dprime + nsolve;
+                    Real *z = u + nsolve;
 
-                    for (int k = lo + 1; k <= hi_unique; ++k)
+                    for (int kk = 0; kk < nsolve; ++kk)
                     {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (k == hi_unique) ? diag_last : diag;
-                        Real const upper = (k == hi_unique) ? 0.0_rt : -1.0_rt;
-
-                        denom = diag_i - lower * scratch(i, j, k - 1, 0);
-                        scratch(i, j, k, 0) = upper / denom;
-                        field_arr(i, j, k) =
-                            (rhs_arr(i, j, k) - lower * field_arr(i, j, k - 1)) / denom;
+                        x[kk] = field_arr(i, j, lo + kk);
                     }
 
-                    for (int k = hi_unique - 1; k >= lo; --k)
+                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
+                                           bb, cprime, dprime, u, z, nsolve);
+
+                    for (int kk = 0; kk < nsolve; ++kk)
                     {
-                        field_arr(i, j, k) -= scratch(i, j, k, 0) * field_arr(i, j, k + 1);
+                        field_arr(i, j, lo + kk) = x[kk];
                     }
-
-                    denom = diag0;
-                    scratch(i, j, lo, 0) = -1.0_rt / denom;
-                    scratch(i, j, lo, 1) = gamma / denom;
-
-                    for (int k = lo + 1; k <= hi_unique; ++k)
-                    {
-                        Real const lower = -1.0_rt;
-                        Real const diag_i = (k == hi_unique) ? diag_last : diag;
-                        Real const upper = (k == hi_unique) ? 0.0_rt : -1.0_rt;
-                        Real const u_i = (k == hi_unique) ? -1.0_rt : 0.0_rt;
-
-                        denom = diag_i - lower * scratch(i, j, k - 1, 0);
-                        scratch(i, j, k, 0) = upper / denom;
-                        scratch(i, j, k, 1) =
-                            (u_i - lower * scratch(i, j, k - 1, 1)) / denom;
-                    }
-
-                    for (int k = hi_unique - 1; k >= lo; --k)
-                    {
-                        scratch(i, j, k, 1) -= scratch(i, j, k, 0) * scratch(i, j, k + 1, 1);
-                    }
-
-                    Real const sm_denom =
-                        1.0_rt + scratch(i, j, lo, 1) + scratch(i, j, hi_unique, 1) * diag_inv;
-                    Real const fact =
-                        (field_arr(i, j, lo) + field_arr(i, j, hi_unique) * diag_inv) / sm_denom;
-
-                    for (int k = lo; k <= hi_unique; ++k)
-                    {
-                        field_arr(i, j, k) -= fact * scratch(i, j, k, 1);
-                    }
-
-                    field_arr(i, j, hi) = field_arr(i, j, lo); });
+                    field_arr(i, j, hi) = x[0]; });
             }
             else
             {
