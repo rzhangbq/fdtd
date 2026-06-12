@@ -4,7 +4,6 @@
 #include "util.H"
 
 #include <AMReX_FArrayBox.H>
-#include <AMReX_GpuElixir.H>
 #include <AMReX_MFIter.H>
 #include <AMReX_ParmParse.H>
 
@@ -86,8 +85,6 @@ namespace
             auto const &field_arr = field.array(mfi);
             auto const &rhs_arr = rhs.const_array(mfi);
             FArrayBox tridiag_workspace(bx, 2, The_Async_Arena());
-            Elixir tridiag_workspace_lifetime = tridiag_workspace.elixir();
-            amrex::ignore_unused(tridiag_workspace_lifetime);
             auto const &scratch = tridiag_workspace.array();
 
             if (solve_dir == 0)

@@ -15,11 +15,25 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Real staggered_coord(int component, int coord_dir, int i, int j, int k,
                          GpuArray<Real, AMREX_SPACEDIM> const &problo,
+                         GpuArray<int, AMREX_SPACEDIM> const &ncells,
                          GpuArray<Real, AMREX_SPACEDIM> const &dx)
     {
         int idx = (coord_dir == 0) ? i : ((coord_dir == 1) ? j : k);
-        Real offset = (component == coord_dir) ? 0.5_rt : 0.0_rt;
-        return problo[coord_dir] + (idx + offset) * dx[coord_dir];
+        bool const is_nodal = (component != coord_dir);
+        Real offset = is_nodal ? 0.0_rt : 0.5_rt;
+
+        // Periodic nodal endpoints are duplicate valid points; initialize both
+        // representations from the same index-space coordinate.
+        if (is_nodal)
+        {
+            if (idx >= ncells[coord_dir])
+            {
+                idx -= ncells[coord_dir];
+            }
+        }
+
+        Real coord = problo[coord_dir] + (idx + offset) * dx[coord_dir];
+        return coord;
     }
 
     // Gaussian-modulated plane wave along ic_dir: E0 * exp(-(xi-x0)^2/(2 sigma^2)) * cos(k0*(xi-x0))
@@ -27,10 +41,11 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Real gaussian_plane_wave(int component, int dir, int i, int j, int k,
                              GpuArray<Real, AMREX_SPACEDIM> const &problo,
+                             GpuArray<int, AMREX_SPACEDIM> const &ncells,
                              GpuArray<Real, AMREX_SPACEDIM> const &dx,
                              Real x0, Real sigma, Real k0)
     {
-        Real xi = staggered_coord(component, dir, i, j, k, problo, dx);
+        Real xi = staggered_coord(component, dir, i, j, k, problo, ncells, dx);
         Real dxi = xi - x0;
         Real envelope = std::exp(-dxi * dxi / (2.0_rt * sigma * sigma));
         Real carrier = std::cos(k0 * dxi);
@@ -72,6 +87,8 @@ void InitSetupFields(
     auto problo = geom.ProbLoArray();
     auto probhi = geom.ProbHiArray();
     auto dx = geom.CellSizeArray();
+    GpuArray<int, AMREX_SPACEDIM> const ncells{
+        AMREX_D_DECL(geom.Domain().length(0), geom.Domain().length(1), geom.Domain().length(2))};
 
     Real E0 = ic_amplitude;
     const int dir = ic_dir;
@@ -98,13 +115,13 @@ void InitSetupFields(
 
         ParallelFor(efields[pol], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            Real g = gaussian_plane_wave(pol, dir, i, j, k, problo, dx, x0, sigma, k0);
+            Real g = gaussian_plane_wave(pol, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
             ea[b](i, j, k) = E0 * g; });
 
         // B = (1/c) k_hat x E at t=0; sample along ic_dir at B_bdir Yee locations
         ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            Real g = gaussian_plane_wave(bdir, dir, i, j, k, problo, dx, x0, sigma, k0);
+            Real g = gaussian_plane_wave(bdir, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
             ba[b](i, j, k) = bsign * B0 * g; });
     }
     else
@@ -116,7 +133,7 @@ void InitSetupFields(
 
         ParallelFor(efields[pol], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            Real phase_coord = staggered_coord(pol, dir, i, j, k, problo, dx);
+            Real phase_coord = staggered_coord(pol, dir, i, j, k, problo, ncells, dx);
             Real s = std::sin(kw * phase_coord);
             ea[b](i, j, k) = E0 * s; });
 
@@ -126,7 +143,7 @@ void InitSetupFields(
             // B = (1/c) k_hat x E for a +dir traveling wave at t=0
             ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                         {
-                Real phase_coord = staggered_coord(bdir, dir, i, j, k, problo, dx);
+                Real phase_coord = staggered_coord(bdir, dir, i, j, k, problo, ncells, dx);
                 Real s = std::sin(kw * phase_coord);
                 ba[b](i, j, k) = bsign * B0 * s; });
         }
@@ -137,8 +154,4 @@ void InitSetupFields(
     Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
     amrex::FillBoundary(efield_ptrs, geom.periodicity());
     amrex::FillBoundary(bfield_ptrs, geom.periodicity());
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        efields[idim].OverrideSync(geom.periodicity());
-    }
 }
