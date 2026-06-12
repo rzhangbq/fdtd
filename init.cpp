@@ -140,6 +140,5 @@ void InitSetupFields(
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         efields[idim].OverrideSync(geom.periodicity());
-        bfields[idim].OverrideSync(geom.periodicity());
     }
 }
