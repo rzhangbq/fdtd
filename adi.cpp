@@ -57,29 +57,35 @@ namespace
         return copies;
     }
 
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void solveTridiagonal(Real const *a,
-                          Real const *b,
-                          Real const *c,
-                          Real const *rhs,
-                          Real *x,
-                          Real *cprime,
-                          Real *dprime,
-                          int n) noexcept
+    // Thomas tridiagonal solve. If rhs != nullptr, solve T x = rhs.
+    // If rhs == nullptr, use the sparse Sherman-Morrison RHS u with u[0] = 1 and
+    // u[n-1] = alpha/gamma (all other entries zero); alpha and gamma are only read then.
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE void solveTridiagonal(Real const *a,
+                                                                   Real const *b,
+                                                                   Real const *c,
+                                                                   Real const *rhs,
+                                                                   Real *x,
+                                                                   Real *cprime,
+                                                                   Real *dprime,
+                                                                   int n,
+                                                                   Real alpha = 0.0_rt,
+                                                                   Real gamma = 1.0_rt) noexcept
     {
         AMREX_ALWAYS_ASSERT(n >= 2);
 
         Real denom = b[0];
         AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
         cprime[0] = c[0] / denom;
-        dprime[0] = rhs[0] / denom;
+        dprime[0] = ((rhs != nullptr) ? rhs[0] : 1.0_rt) / denom;
 
         for (int i = 1; i < n; ++i)
         {
             denom = b[i] - a[i] * cprime[i - 1];
             AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
             cprime[i] = (i < n - 1) ? c[i] / denom : 0.0_rt;
-            dprime[i] = (rhs[i] - a[i] * dprime[i - 1]) / denom;
+            Real const rhs_i = (rhs != nullptr) ? rhs[i]
+                                                : ((i == n - 1) ? alpha / gamma : 0.0_rt);
+            dprime[i] = (rhs_i - a[i] * dprime[i - 1]) / denom;
         }
 
         x[n - 1] = dprime[n - 1];
@@ -89,50 +95,35 @@ namespace
         }
     }
 
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void solveCyclicTridiagonal(Real const *a,
-                                Real const *b,
-                                Real const *c,
-                                Real alpha,
-                                Real beta,
-                                Real const *rhs,
-                                Real *x,
-                                Real *bb,
-                                Real *cprime,
-                                Real *dprime,
-                                Real *u,
-                                Real *z,
-                                int n) noexcept
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE void solveCyclicTridiagonal(Real const *a,
+                                                                         Real const *bb,
+                                                                         Real const *c,
+                                                                         Real alpha,
+                                                                         Real beta,
+                                                                         Real gamma,
+                                                                         Real const *rhs,
+                                                                         Real *x,
+                                                                         Real *cprime,
+                                                                         Real *dprime,
+                                                                         Real *z,
+                                                                         int n) noexcept
     {
         AMREX_ALWAYS_ASSERT(n > 2);
-
-        Real const gamma = -b[0];
         AMREX_ALWAYS_ASSERT(std::abs(gamma) > 0.0_rt);
 
-        for (int i = 0; i < n; ++i)
-        {
-            bb[i] = b[i];
-        }
-        bb[0] -= gamma;
-        bb[n - 1] -= alpha * beta / gamma;
-
+        // first solve Tx = rhs, with T = [a, bb, c]
         solveTridiagonal(a, bb, c, rhs, x, cprime, dprime, n);
 
-        for (int i = 0; i < n; ++i)
-        {
-            u[i] = 0.0_rt;
-        }
-        u[0] = gamma;
-        u[n - 1] = alpha;
-        solveTridiagonal(a, bb, c, u, z, cprime, dprime, n);
+        // second solve Tz = u, u[0] = 1, u[n-1] = alpha/gamma
+        solveTridiagonal(a, bb, c, nullptr, z, cprime, dprime, n, alpha, gamma);
 
-        Real const denom = 1.0_rt + z[0] + beta * z[n - 1] / gamma;
+        Real const denom = 1.0_rt + gamma * z[0] + beta * z[n - 1];
         AMREX_ALWAYS_ASSERT(std::abs(denom) > 0.0_rt);
         Real const fact = (x[0] + beta * x[n - 1] / gamma) / denom;
 
         for (int i = 0; i < n; ++i)
         {
-            x[i] -= fact * z[i];
+            x[i] -= fact * gamma * z[i];
         }
     }
 
@@ -152,29 +143,36 @@ namespace
             (solver_name + " requires at least three unique points along the implicit direction")
                 .c_str());
 
+        Real const alpha = -1.0_rt;
+        Real const beta = -1.0_rt;
+
         std::vector<Real> a_h(nsolve, -1.0_rt);
-        std::vector<Real> b_h(nsolve, diag);
+        std::vector<Real> bb_h(nsolve, diag);
         std::vector<Real> c_h(nsolve, -1.0_rt);
         a_h[0] = 0.0_rt;
         c_h[nsolve - 1] = 0.0_rt;
 
+        // bb is not the original diagonal b, but b with bb[0] = b[0] - gamma and bb[n-1] = b[n-1] - alpha * beta / gamma
+        // this is modification for Sherman–Morrison formula
+        Real const gamma = -bb_h[0];
+        bb_h[0] -= gamma;
+        bb_h[nsolve - 1] -= alpha * beta / gamma;
+
         Gpu::DeviceVector<Real> a_d(nsolve);
-        Gpu::DeviceVector<Real> b_d(nsolve);
+        Gpu::DeviceVector<Real> bb_d(nsolve);
         Gpu::DeviceVector<Real> c_d(nsolve);
         Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_d.begin());
-        Gpu::copyAsync(Gpu::hostToDevice, b_h.begin(), b_h.end(), b_d.begin());
+        Gpu::copyAsync(Gpu::hostToDevice, bb_h.begin(), bb_h.end(), bb_d.begin());
         Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_d.begin());
         Gpu::streamSynchronize();
 
         Real const *a = a_d.data();
-        Real const *b = b_d.data();
+        Real const *bb = bb_d.data();
         Real const *c = c_d.data();
-        Real const alpha = -1.0_rt;
-        Real const beta = -1.0_rt;
 
         field.ParallelCopy(rhs, 0, 0, 1);
 
-        constexpr int n_line_work = 6; // x, bb, cprime, dprime, u, z
+        constexpr int n_line_work = 4; // cprime, dprime, x, z
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
         {
@@ -185,7 +183,10 @@ namespace
             if (solve_dir == 0)
             {
                 Box const b2d = amrex::makeSlab(bx, 0, lo);
+                // nlines = jlen * klen; need them since all j, k are solved in parallel
                 Long const nlines = b2d.numPts();
+                // declaring vectors all at once
+                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const jlo = b2d.smallEnd(1);
@@ -195,20 +196,19 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
                                       {
                     int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *x = work + line_id * nsolve * n_line_work;
-                    Real *bb = x + nsolve;
-                    Real *cprime = bb + nsolve;
+                    Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
-                    Real *u = dprime + nsolve;
-                    Real *z = u + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
                     for (int ii = 0; ii < nsolve; ++ii)
                     {
                         x[ii] = field_arr(lo + ii, j, k);
                     }
-
-                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
-                                           bb, cprime, dprime, u, z, nsolve);
+                    
+                    // using cyclic tridiagonal by Sherman–Morrison formula
+                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                                           cprime, dprime, z, nsolve);
 
                     for (int ii = 0; ii < nsolve; ++ii)
                     {
@@ -219,7 +219,10 @@ namespace
             else if (solve_dir == 1)
             {
                 Box const b2d = amrex::makeSlab(bx, 1, lo);
+                // nlines = ilen * klen; need them since all i, k are solved in parallel
                 Long const nlines = b2d.numPts();
+                // declaring vectors all at once
+                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
@@ -229,20 +232,19 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
                                       {
                     int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *x = work + line_id * nsolve * n_line_work;
-                    Real *bb = x + nsolve;
-                    Real *cprime = bb + nsolve;
+                    Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
-                    Real *u = dprime + nsolve;
-                    Real *z = u + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
                     for (int jj = 0; jj < nsolve; ++jj)
                     {
                         x[jj] = field_arr(i, lo + jj, k);
                     }
 
-                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
-                                           bb, cprime, dprime, u, z, nsolve);
+                    // using cyclic tridiagonal by Sherman–Morrison formula
+                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                                           cprime, dprime, z, nsolve);
 
                     for (int jj = 0; jj < nsolve; ++jj)
                     {
@@ -253,7 +255,10 @@ namespace
             else if (solve_dir == 2)
             {
                 Box const b2d = amrex::makeSlab(bx, 2, lo);
+                // nlines = ilen * jlen; need them since all i, j are solved in parallel
                 Long const nlines = b2d.numPts();
+                // declaring vectors all at once
+                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
@@ -263,20 +268,19 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                                       {
                     int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *x = work + line_id * nsolve * n_line_work;
-                    Real *bb = x + nsolve;
-                    Real *cprime = bb + nsolve;
+                    Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
-                    Real *u = dprime + nsolve;
-                    Real *z = u + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
                     for (int kk = 0; kk < nsolve; ++kk)
                     {
                         x[kk] = field_arr(i, j, lo + kk);
                     }
 
-                    solveCyclicTridiagonal(a, b, c, alpha, beta, x, x,
-                                           bb, cprime, dprime, u, z, nsolve);
+                    // using cyclic tridiagonal by Sherman–Morrison formula
+                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                                           cprime, dprime, z, nsolve);
 
                     for (int kk = 0; kk < nsolve; ++kk)
                     {
