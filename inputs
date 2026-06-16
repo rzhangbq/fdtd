@@ -9,6 +9,10 @@ adi.plot_format = numpy    # numpy (.bin + .json) or visit (AMReX plotfiles for 
 adi.output_dir = plt # numpy: directory; visit: plotfile prefix (e.g. plt -> plt00000)
 adi.cfl = 2              # fraction of 3D Yee CFL limit (not c*dt/dx; see notes/adi.tex)
 
+# PEC walls on the two faces normal to this direction (0=x, 1=y, 2=z).
+# Use -1 for fully periodic boundaries (default).
+# adi.pec_normal = 0
+
 # Initial condition options:
 #   sinwave        : traveling sinusoidal plane wave
 #   standingwave   : standing wave seeded with E(x) and B=0 at t=0

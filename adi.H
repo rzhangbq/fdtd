@@ -97,8 +97,13 @@ private:
     amrex::Real m_pulse_center = 0.5; // xi_0 along ic_dir
     amrex::Real m_pulse_sigma = -1.0; // <0: 0.1 * min domain extent
 
+    // PEC walls normal to this direction (0=x, 1=y, 2=z); -1 = fully periodic.
+    int m_pec_normal = -1;
+
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_efields;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_bfields;
+
+    void enforcePecEfields(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields) const;
 };
 
 #endif
