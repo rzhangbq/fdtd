@@ -1077,9 +1077,6 @@ void ADI::enforcePecEfields(Array<MultiFab, AMREX_SPACEDIM> &efields) const
         return;
     }
 
-    Box const domain = m_geom.Domain();
-    int const lo = domain.smallEnd(m_pec_normal);
-    int const hi = domain.bigEnd(m_pec_normal);
     int const pec_normal = m_pec_normal;
 
     for (int comp = 0; comp < AMREX_SPACEDIM; ++comp)
@@ -1090,6 +1087,18 @@ void ADI::enforcePecEfields(Array<MultiFab, AMREX_SPACEDIM> &efields) const
         }
 
         MultiFab &field = efields[comp];
+        // Tangential E that is cell-centered along the wall normal is not stored
+        // on the PEC plane (see notes/adi.tex Yee table); only nodal components live
+        // on the boundary and need explicit Dirichlet enforcement here.
+        if (field.ixType().cellCentered(pec_normal))
+        {
+            continue;
+        }
+
+        Box const bounds = field.boxArray().minimalBox();
+        int const lo = bounds.smallEnd(pec_normal);
+        int const hi = bounds.bigEnd(pec_normal);
+
         auto const &arrs = field.arrays();
 
         ParallelFor(field, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k) noexcept
