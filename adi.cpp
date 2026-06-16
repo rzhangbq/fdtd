@@ -1,6 +1,7 @@
 
 #include "adi.H"
 #include "init.H"
+#include "pec.H"
 #include "util.H"
 
 #include <AMReX_Gpu.H>
@@ -131,12 +132,20 @@ namespace
                                  MultiFab const &rhs,
                                  int solve_dir,
                                  Real diag,
+                                 int pec_normal,
+                                 int e_comp,
                                  std::string const &solver_name)
     {
         Box const domain = field.boxArray().minimalBox();
         int const lo = domain.smallEnd(solve_dir);
         int const hi = domain.bigEnd(solve_dir);
         int const nsolve = hi - lo; // Nodal endpoint at hi duplicates the periodic node at lo.
+
+        bool const skip_pec_lines =
+            pec_normal >= 0 && e_comp != pec_normal && solve_dir != pec_normal &&
+            field.ixType().nodeCentered(pec_normal);
+        int const pec_lo = skip_pec_lines ? domain.smallEnd(pec_normal) : 0;
+        int const pec_hi = skip_pec_lines ? domain.bigEnd(pec_normal) : 0;
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             nsolve > 2,
@@ -195,6 +204,16 @@ namespace
 
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
                                       {
+                    if (skip_pec_lines &&
+                        PecOnWallPlane(pec_normal, pec_lo, pec_hi, 0, j, k))
+                    {
+                        for (int ii = lo; ii <= hi; ++ii)
+                        {
+                            field_arr(ii, j, k) = 0.0_rt;
+                        }
+                        return;
+                    }
+
                     int const line_id = (j - jlo) + (k - klo) * jlen;
                     Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
@@ -231,6 +250,16 @@ namespace
 
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
                                       {
+                    if (skip_pec_lines &&
+                        PecOnWallPlane(pec_normal, pec_lo, pec_hi, i, 0, k))
+                    {
+                        for (int jj = lo; jj <= hi; ++jj)
+                        {
+                            field_arr(i, jj, k) = 0.0_rt;
+                        }
+                        return;
+                    }
+
                     int const line_id = (i - ilo) + (k - klo) * ilen;
                     Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
@@ -267,6 +296,16 @@ namespace
 
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                                       {
+                    if (skip_pec_lines &&
+                        PecOnWallPlane(pec_normal, pec_lo, pec_hi, i, j, 0))
+                    {
+                        for (int kk = lo; kk <= hi; ++kk)
+                        {
+                            field_arr(i, j, kk) = 0.0_rt;
+                        }
+                        return;
+                    }
+
                     int const line_id = (i - ilo) + (j - jlo) * ilen;
                     Real *cprime = work + line_id * nsolve * n_line_work;
                     Real *dprime = cprime + nsolve;
@@ -511,7 +550,7 @@ void ADI::initData()
     InitSetupFields("adi", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
                     m_geom, m_efields, m_bfields);
-    UtilEnforcePecEfields(m_pec_normal, m_efields);
+    PecPinTangentialEwalls(m_pec_normal, m_efields);
 }
 
 void ADI::evolve()
@@ -617,7 +656,6 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    UtilEnforcePecEfields(m_pec_normal, efields);
 
     stepBx(bfields[0], efields[1], eold[2], dt);
     stepBy(bfields[1], efields[2], eold[0], dt);
@@ -664,7 +702,6 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    UtilEnforcePecEfields(m_pec_normal, efields);
 
     stepBx(bfields[0], eold[1], efields[2], dt);
     stepBy(bfields[1], eold[2], efields[0], dt);
@@ -813,7 +850,7 @@ void ADI::solveImplicitEx1(MultiFab &ex, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ex, rhs, 1, diag, "solveImplicitEx1");
+        solvePeriodicNodalLines(ex, rhs, 1, diag, m_pec_normal, 0, "solveImplicitEx1");
     }
 }
 
@@ -828,7 +865,7 @@ void ADI::solveImplicitEy1(MultiFab &ey, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ey, rhs, 2, diag, "solveImplicitEy1");
+        solvePeriodicNodalLines(ey, rhs, 2, diag, m_pec_normal, 1, "solveImplicitEy1");
     }
 }
 
@@ -843,7 +880,7 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ez, rhs, 0, diag, "solveImplicitEz1");
+        solvePeriodicNodalLines(ez, rhs, 0, diag, m_pec_normal, 2, "solveImplicitEz1");
     }
 }
 
@@ -987,7 +1024,7 @@ void ADI::solveImplicitEx2(MultiFab &ex, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ex, rhs, 2, diag, "solveImplicitEx2");
+        solvePeriodicNodalLines(ex, rhs, 2, diag, m_pec_normal, 0, "solveImplicitEx2");
     }
 }
 
@@ -1002,7 +1039,7 @@ void ADI::solveImplicitEy2(MultiFab &ey, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ey, rhs, 0, diag, "solveImplicitEy2");
+        solvePeriodicNodalLines(ey, rhs, 0, diag, m_pec_normal, 1, "solveImplicitEy2");
     }
 }
 
@@ -1017,7 +1054,7 @@ void ADI::solveImplicitEz2(MultiFab &ez, MultiFab const &rhs, Real dt) const
     }
     else
     {
-        solvePeriodicNodalLines(ez, rhs, 1, diag, "solveImplicitEz2");
+        solvePeriodicNodalLines(ez, rhs, 1, diag, m_pec_normal, 2, "solveImplicitEz2");
     }
 }
 

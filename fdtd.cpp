@@ -1,6 +1,7 @@
 
 #include "fdtd.H"
 #include "init.H"
+#include "pec.H"
 #include "util.H"
 
 #include <AMReX_ParmParse.H>
@@ -78,7 +79,7 @@ void FDTD::initData()
     InitSetupFields("fdtd", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
                     m_geom, m_efields, m_bfields);
-    UtilEnforcePecEfields(m_pec_normal, m_efields);
+    PecPinTangentialEwalls(m_pec_normal, m_efields);
 }
 
 void FDTD::evolve()
@@ -98,6 +99,20 @@ void FDTD::evolve()
     auto const period = m_geom.periodicity();
     Vector<MultiFab *> efields{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
     Vector<MultiFab *> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+
+    int const pec = m_pec_normal;
+    Box const ex_box = m_efields[0].boxArray().minimalBox();
+    Box const ey_box = m_efields[1].boxArray().minimalBox();
+    Box const ez_box = m_efields[2].boxArray().minimalBox();
+    int const ex_plo = (pec >= 0) ? ex_box.smallEnd(pec) : 0;
+    int const ex_phi = (pec >= 0) ? ex_box.bigEnd(pec) : 0;
+    int const ey_plo = (pec >= 0) ? ey_box.smallEnd(pec) : 0;
+    int const ey_phi = (pec >= 0) ? ey_box.bigEnd(pec) : 0;
+    int const ez_plo = (pec >= 0) ? ez_box.smallEnd(pec) : 0;
+    int const ez_phi = (pec >= 0) ? ez_box.bigEnd(pec) : 0;
+    bool const ex_nodal_on_pec = pec >= 0 && m_efields[0].ixType().nodeCentered(pec);
+    bool const ey_nodal_on_pec = pec >= 0 && m_efields[1].ixType().nodeCentered(pec);
+    bool const ez_nodal_on_pec = pec >= 0 && m_efields[2].ixType().nodeCentered(pec);
 
     Real time = 0.0_rt;
 
@@ -129,14 +144,34 @@ void FDTD::evolve()
         amrex::FillBoundary(bfields, period);
 
         ParallelFor(m_efields[0], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                    { ex[b](i, j, k) += c2dt * (dxinv[1] * (bz[b](i, j, k) - bz[b](i, j - 1, k)) - dxinv[2] * (by[b](i, j, k) - by[b](i, j, k - 1))); });
+                    {
+            if (PecSkipEupdate(pec, 0, ex_nodal_on_pec, ex_plo, ex_phi, i, j, k))
+            {
+                ex[b](i, j, k) = 0.0_rt;
+                return;
+            }
+            ex[b](i, j, k) += c2dt * (dxinv[1] * (bz[b](i, j, k) - bz[b](i, j - 1, k)) -
+                                        dxinv[2] * (by[b](i, j, k) - by[b](i, j, k - 1))); });
         ParallelFor(m_efields[1], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                    { ey[b](i, j, k) += c2dt * (dxinv[2] * (bx[b](i, j, k) - bx[b](i, j, k - 1)) - dxinv[0] * (bz[b](i, j, k) - bz[b](i - 1, j, k))); });
+                    {
+            if (PecSkipEupdate(pec, 1, ey_nodal_on_pec, ey_plo, ey_phi, i, j, k))
+            {
+                ey[b](i, j, k) = 0.0_rt;
+                return;
+            }
+            ey[b](i, j, k) += c2dt * (dxinv[2] * (bx[b](i, j, k) - bx[b](i, j, k - 1)) -
+                                        dxinv[0] * (bz[b](i, j, k) - bz[b](i - 1, j, k))); });
         ParallelFor(m_efields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                    { ez[b](i, j, k) += c2dt * (dxinv[0] * (by[b](i, j, k) - by[b](i - 1, j, k)) - dxinv[1] * (bx[b](i, j, k) - bx[b](i, j - 1, k))); });
+                    {
+            if (PecSkipEupdate(pec, 2, ez_nodal_on_pec, ez_plo, ez_phi, i, j, k))
+            {
+                ez[b](i, j, k) = 0.0_rt;
+                return;
+            }
+            ez[b](i, j, k) += c2dt * (dxinv[0] * (by[b](i, j, k) - by[b](i - 1, j, k)) -
+                                        dxinv[1] * (bx[b](i, j, k) - bx[b](i, j - 1, k))); });
 
         amrex::FillBoundary(efields, period);
-        UtilEnforcePecEfields(m_pec_normal, m_efields);
 
         ParallelFor(m_bfields[0], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     { bx[b](i, j, k) -= halfdt * (dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k)) - dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k))); });
