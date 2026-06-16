@@ -102,8 +102,6 @@ private:
 
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_efields;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_bfields;
-
-    void enforcePecEfields(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields) const;
 };
 
 #endif

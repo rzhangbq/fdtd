@@ -511,7 +511,7 @@ void ADI::initData()
     InitSetupFields("adi", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
                     m_geom, m_efields, m_bfields);
-    enforcePecEfields(m_efields);
+    UtilEnforcePecEfields(m_pec_normal, m_efields);
 }
 
 void ADI::evolve()
@@ -617,7 +617,7 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    enforcePecEfields(efields);
+    UtilEnforcePecEfields(m_pec_normal, efields);
 
     stepBx(bfields[0], efields[1], eold[2], dt);
     stepBy(bfields[1], efields[2], eold[0], dt);
@@ -664,7 +664,7 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
                             IntVect(0), IntVect(0), period);
 
     amrex::FillBoundary(efield_ptrs, period);
-    enforcePecEfields(efields);
+    UtilEnforcePecEfields(m_pec_normal, efields);
 
     stepBx(bfields[0], eold[1], efields[2], dt);
     stepBy(bfields[1], eold[2], efields[0], dt);
@@ -1068,58 +1068,4 @@ void ADI::stepBz(MultiFab &bz_dst, MultiFab const &ex_src,
                 { bz[b](i, j, k) +=
                       halfdt * (dxinv[1] * (ex[b](i, j + 1, k) - ex[b](i, j, k)) -
                                 dxinv[0] * (ey[b](i + 1, j, k) - ey[b](i, j, k))); });
-}
-
-void ADI::enforcePecEfields(Array<MultiFab, AMREX_SPACEDIM> &efields) const
-{
-    if (m_pec_normal < 0)
-    {
-        return;
-    }
-
-    int const pec_normal = m_pec_normal;
-
-    for (int comp = 0; comp < AMREX_SPACEDIM; ++comp)
-    {
-        if (comp == pec_normal)
-        {
-            continue;
-        }
-
-        MultiFab &field = efields[comp];
-        // Tangential E that is cell-centered along the wall normal is not stored
-        // on the PEC plane (see notes/adi.tex Yee table); only nodal components live
-        // on the boundary and need explicit Dirichlet enforcement here.
-        if (field.ixType().cellCentered(pec_normal))
-        {
-            continue;
-        }
-
-        Box const bounds = field.boxArray().minimalBox();
-        int const lo = bounds.smallEnd(pec_normal);
-        int const hi = bounds.bigEnd(pec_normal);
-
-        auto const &arrs = field.arrays();
-
-        ParallelFor(field, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k) noexcept
-                    {
-            bool on_pec_plane = false;
-            if (pec_normal == 0)
-            {
-                on_pec_plane = (i == lo || i == hi);
-            }
-            else if (pec_normal == 1)
-            {
-                on_pec_plane = (j == lo || j == hi);
-            }
-            else
-            {
-                on_pec_plane = (k == lo || k == hi);
-            }
-
-            if (on_pec_plane)
-            {
-                arrs[b](i, j, k) = 0.0_rt;
-            } });
-    }
 }

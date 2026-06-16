@@ -1,5 +1,6 @@
 #include "util.H"
 
+#include <AMReX_Gpu.H>
 #include <AMReX_GpuContainers.H>
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_PlotFileUtil.H>
@@ -117,6 +118,58 @@ namespace
         meta << "}\n";
     }
 } // namespace
+
+void UtilEnforcePecEfields(int pec_normal,
+                           Array<MultiFab, AMREX_SPACEDIM> &efields)
+{
+    if (pec_normal < 0)
+    {
+        return;
+    }
+
+    for (int comp = 0; comp < AMREX_SPACEDIM; ++comp)
+    {
+        if (comp == pec_normal)
+        {
+            continue;
+        }
+
+        MultiFab &field = efields[comp];
+        // Tangential E that is cell-centered along the wall normal is not stored
+        // on the PEC plane (see notes/adi.tex Yee table).
+        if (field.ixType().cellCentered(pec_normal))
+        {
+            continue;
+        }
+
+        Box const bounds = field.boxArray().minimalBox();
+        int const lo = bounds.smallEnd(pec_normal);
+        int const hi = bounds.bigEnd(pec_normal);
+
+        auto const &arrs = field.arrays();
+
+        ParallelFor(field, [=] AMREX_GPU_DEVICE(int b, int i, int j, int k) noexcept
+                    {
+            bool on_pec_plane = false;
+            if (pec_normal == 0)
+            {
+                on_pec_plane = (i == lo || i == hi);
+            }
+            else if (pec_normal == 1)
+            {
+                on_pec_plane = (j == lo || j == hi);
+            }
+            else
+            {
+                on_pec_plane = (k == lo || k == hi);
+            }
+
+            if (on_pec_plane)
+            {
+                arrs[b](i, j, k) = 0.0_rt;
+            } });
+    }
+}
 
 void UtilBuildCellCenteredPlotMF(
     MultiFab &plotmf,

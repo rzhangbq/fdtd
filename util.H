@@ -23,4 +23,9 @@ void UtilWritePlotOutput(
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields);
 
+// Zero tangential E on PEC planes. pec_normal: wall normal (0=x, 1=y, 2=z); -1 = no-op.
+void UtilEnforcePecEfields(
+    int pec_normal,
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields);
+
 #endif

@@ -38,9 +38,20 @@ FDTD::FDTD()
     pp.query("pulse_center", m_pulse_center);
     pp.query("pulse_sigma", m_pulse_sigma);
 
+    m_pec_normal = -1;
+    pp.query("pec_normal", m_pec_normal);
+    if (m_pec_normal < -1 || m_pec_normal > 2)
+    {
+        amrex::Abort("fdtd.pec_normal must be -1 (none) or 0, 1, 2");
+    }
+
     Box domain(IntVect(0), m_n_cells - 1);
     RealBox real_box(prob_lo.begin(), prob_hi.begin());
     Array<int, AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(1, 1, 1)};
+    if (m_pec_normal >= 0)
+    {
+        is_periodic[m_pec_normal] = 0;
+    }
 
     m_geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
@@ -67,6 +78,7 @@ void FDTD::initData()
     InitSetupFields("fdtd", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
                     m_geom, m_efields, m_bfields);
+    UtilEnforcePecEfields(m_pec_normal, m_efields);
 }
 
 void FDTD::evolve()
@@ -124,6 +136,7 @@ void FDTD::evolve()
                     { ez[b](i, j, k) += c2dt * (dxinv[0] * (by[b](i, j, k) - by[b](i - 1, j, k)) - dxinv[1] * (bx[b](i, j, k) - bx[b](i, j - 1, k))); });
 
         amrex::FillBoundary(efields, period);
+        UtilEnforcePecEfields(m_pec_normal, m_efields);
 
         ParallelFor(m_bfields[0], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     { bx[b](i, j, k) -= halfdt * (dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k)) - dxinv[2] * (ey[b](i, j, k + 1) - ey[b](i, j, k))); });
