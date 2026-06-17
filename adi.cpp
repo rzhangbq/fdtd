@@ -493,7 +493,23 @@ ADI::ADI()
     pp.query("plot_int", m_plot_int);
     pp.query("plot_format", m_plot_format);
     pp.query("cfl", m_cfl);
+    pp.query("dt", m_dt);
     pp.query("output_dir", m_output_dir);
+
+    const bool use_dt = (m_dt > 0 && m_cfl < 0);
+    const bool use_cfl = (m_dt < 0 && m_cfl > 0);
+    if (!use_dt && !use_cfl)
+    {
+        if (m_dt > 0 && m_cfl > 0)
+        {
+            amrex::Abort("adi.dt and adi.cfl are both positive; set one < 0 to disable it");
+        }
+        if (m_dt < 0 && m_cfl < 0)
+        {
+            amrex::Abort("adi.dt and adi.cfl are both negative; set one > 0");
+        }
+        amrex::Abort("adi.dt and adi.cfl: exactly one must be > 0 and the other < 0");
+    }
 
     if (m_plot_format != "numpy" && m_plot_format != "visit")
     {
@@ -563,7 +579,15 @@ void ADI::evolve()
     {
         inv_dx2_sum += dxinv[idim] * dxinv[idim];
     }
-    Real dt = m_cfl / (c * std::sqrt(inv_dx2_sum));
+    Real dt;
+    if (m_dt > 0 && m_cfl < 0)
+    {
+        dt = m_dt;
+    }
+    else
+    {
+        dt = m_cfl / (c * std::sqrt(inv_dx2_sum));
+    }
 
     Real time = 0.0_rt;
 

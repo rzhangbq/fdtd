@@ -84,7 +84,8 @@ private:
 
     int m_max_step = 100;
     int m_plot_int = 0;
-    amrex::Real m_cfl = 0.99;
+    amrex::Real m_cfl = 0.99;  // >0: CFL fraction; <0: use m_dt
+    amrex::Real m_dt = -1.0;   // >0: fixed timestep [s]; <0: use m_cfl
     std::string m_plot_format = "numpy"; // "numpy" or "visit"
     std::string m_output_dir = "numpy_out";
 
