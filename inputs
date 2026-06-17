@@ -11,13 +11,13 @@ adi.cfl = 2              # fraction of 3D Yee CFL limit (not c*dt/dx; see notes/
 
 # PEC walls on the two faces normal to this direction (0=x, 1=y, 2=z).
 # Use -1 for fully periodic boundaries (default).
-# adi.pec_normal = 0
+adi.pec_normal = -1
 
 # Initial condition options:
 #   sinwave        : traveling sinusoidal plane wave
 #   standingwave   : standing wave seeded with E(x) and B=0 at t=0
 #   gaussianpulse  : Gaussian-modulated plane wave along ic_dir (carrier: ic_wavelength)
-# adi.ic = sinwave
+adi.ic = sinwave
 
 # Shared by sinwave, standingwave, and gaussianpulse:
 adi.ic_amplitude = 0.01    # E_0
@@ -28,8 +28,5 @@ adi.ic_wavelength = -1       # carrier wavelength along ic_dir (<0 => domain len
 # Gaussian-modulated plane wave (ic = gaussianpulse):
 #   E_pol = E_0 exp(-(xi-x0)^2/(2 sigma^2)) cos(k0*(xi-x0)),  B = (1/c) k_hat x E
 #   xi is coordinate along ic_dir; pulse_center is xi_0
-adi.ic = sinwave
-adi.ic_dir = 2
-adi.ic_pol = 0
 adi.pulse_center = 0.75           # envelope peak xi_0 along ic_dir
 adi.pulse_sigma = 0.05           # envelope sigma; <0 => 0.1 * domain length along ic_dir
