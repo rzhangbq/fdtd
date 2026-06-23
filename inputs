@@ -7,6 +7,7 @@ adi.max_step = 100
 adi.plot_int = 1           # write output every N steps (0 = off)
 adi.plot_format = numpy    # numpy (.bin + .json) or visit (AMReX plotfiles for VisIt)
 adi.output_dir = plt # numpy: directory; visit: plotfile prefix (e.g. plt -> plt00000)
+adi.conv_plt = 0           # numpy only: write a 1D line through the domain center along adi.ic_dir
 adi.cfl = 2              # fraction of 3D Yee CFL limit (<0 => use adi.dt; see notes/adi.tex)
 adi.dt = -1              # fixed timestep [s] (<0 => use adi.cfl)
 

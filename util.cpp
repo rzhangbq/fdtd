@@ -41,6 +41,8 @@ namespace
         std::string const &output_dir,
         int step,
         Real time,
+        bool conv_plt,
+        int ic_dir,
         BoxArray const &grids,
         DistributionMapping const &dmap,
         Geometry const &geom,
@@ -51,8 +53,25 @@ namespace
         UtilBuildCellCenteredPlotMF(plotmf, efields, bfields);
 
         const Box &domain_box = geom.Domain();
-        const auto lo = domain_box.loVect();
-        const auto hi = domain_box.hiVect();
+        IntVect out_lo = domain_box.smallEnd();
+        IntVect out_hi = domain_box.bigEnd();
+        if (conv_plt)
+        {
+            AMREX_ALWAYS_ASSERT(ic_dir >= 0 && ic_dir < AMREX_SPACEDIM);
+            const int mid = domain_box.smallEnd(ic_dir) + domain_box.length(ic_dir) / 2;
+            for (int dir = 0; dir < AMREX_SPACEDIM; ++dir)
+            {
+                if (dir == ic_dir)
+                {
+                    continue;
+                }
+                out_lo[dir] = mid;
+                out_hi[dir] = mid;
+            }
+        }
+
+        const auto lo = out_lo;
+        const auto hi = out_hi;
         const int nx = hi[0] - lo[0] + 1;
         const int ny = hi[1] - lo[1] + 1;
         const int nz = hi[2] - lo[2] + 1;
@@ -64,17 +83,24 @@ namespace
 
         for (MFIter mfi(plotmf); mfi.isValid(); ++mfi)
         {
-            const Box &bx = mfi.validbox();
-            auto const &arr = plotmf.const_array(mfi);
-            ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            Box bx = mfi.validbox();
+            if (conv_plt)
             {
-                const std::size_t base =
-                    (static_cast<std::size_t>(i - lo[0]) * ny + (j - lo[1])) * nz + (k - lo[2]);
-                for (int c = 0; c < ncomp; ++c)
+                bx &= Box(out_lo, out_hi);
+            }
+            auto const &arr = plotmf.const_array(mfi);
+            if (bx.ok())
+            {
+                ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                 {
-                    data_d[base * ncomp + c] = static_cast<double>(arr(i, j, k, c));
-                }
-            });
+                    const std::size_t base =
+                        (static_cast<std::size_t>(i - lo[0]) * ny + (j - lo[1])) * nz + (k - lo[2]);
+                    for (int c = 0; c < ncomp; ++c)
+                    {
+                        data_d[base * ncomp + c] = static_cast<double>(arr(i, j, k, c));
+                    }
+                });
+            }
         }
 
         Vector<double> data(nvals);
@@ -111,6 +137,8 @@ namespace
         meta << "  \"dtype\": \"float64\",\n";
         meta << "  \"layout\": \"C\",\n";
         meta << "  \"components\": [\"Ex\", \"Ey\", \"Ez\", \"Bx\", \"By\", \"Bz\"],\n";
+        meta << "  \"conv_plt\": " << (conv_plt ? "true" : "false") << ",\n";
+        meta << "  \"line_axis\": " << ic_dir << ",\n";
         meta << "  \"fields_file\": \"" << bin_file << "\",\n";
         meta << "  \"prob_lo\": [" << problo[0] << ", " << problo[1] << ", " << problo[2] << "],\n";
         meta << "  \"prob_hi\": [" << probhi[0] << ", " << probhi[1] << ", " << probhi[2] << "]\n";
@@ -137,6 +165,8 @@ void UtilWritePlotOutput(
     std::string const &output_dir,
     int step,
     Real time,
+    bool conv_plt,
+    int ic_dir,
     BoxArray const &grids,
     DistributionMapping const &dmap,
     Geometry const &geom,
@@ -149,6 +179,7 @@ void UtilWritePlotOutput(
     }
     else
     {
-        writeNumpyOutput(output_dir, step, time, grids, dmap, geom, efields, bfields);
+        writeNumpyOutput(output_dir, step, time, conv_plt, ic_dir,
+                         grids, dmap, geom, efields, bfields);
     }
 }

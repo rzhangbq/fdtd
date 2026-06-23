@@ -27,6 +27,7 @@ private:
     amrex::Real m_cfl = 0.99;
     std::string m_plot_format = "numpy"; // "numpy" or "visit"
     std::string m_output_dir = "numpy_out";
+    bool m_conv_plt = false; // reserved for numpy line-output compatibility
 
     std::string m_ic = "sinwave";
     amrex::Real m_ic_amplitude = 1.0;

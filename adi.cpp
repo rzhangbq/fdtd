@@ -495,6 +495,7 @@ ADI::ADI()
     pp.query("cfl", m_cfl);
     pp.query("dt", m_dt);
     pp.query("output_dir", m_output_dir);
+    pp.query("conv_plt", m_conv_plt);
 
     const bool use_dt = (m_dt > 0 && m_cfl < 0);
     const bool use_cfl = (m_dt < 0 && m_cfl > 0);
@@ -622,6 +623,7 @@ void ADI::evolve()
     if (m_plot_int > 0)
     {
         UtilWritePlotOutput(m_plot_format, m_output_dir, 0, time,
+                            m_conv_plt, m_ic_dir,
                             m_grids, m_dmap, m_geom, m_efields, m_bfields);
     }
 
@@ -637,6 +639,7 @@ void ADI::evolve()
         if (m_plot_int > 0 && (step + 1) % m_plot_int == 0)
         {
             UtilWritePlotOutput(m_plot_format, m_output_dir, step + 1, time,
+                                m_conv_plt, m_ic_dir,
                                 m_grids, m_dmap, m_geom, m_efields, m_bfields);
         }
     }

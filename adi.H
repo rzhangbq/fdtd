@@ -88,6 +88,7 @@ private:
     amrex::Real m_dt = -1.0;   // >0: fixed timestep [s]; <0: use m_cfl
     std::string m_plot_format = "numpy"; // "numpy" or "visit"
     std::string m_output_dir = "numpy_out";
+    bool m_conv_plt = false; // numpy output: line along ic_dir through domain center
 
     std::string m_ic = "sinwave";
     amrex::Real m_ic_amplitude = 1.0;

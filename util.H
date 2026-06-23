@@ -17,6 +17,8 @@ void UtilWritePlotOutput(
     std::string const &output_dir,
     int step,
     amrex::Real time,
+    bool conv_plt,
+    int ic_dir,
     amrex::BoxArray const &grids,
     amrex::DistributionMapping const &dmap,
     amrex::Geometry const &geom,
