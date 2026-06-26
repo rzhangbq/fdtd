@@ -128,19 +128,37 @@ namespace
         }
     }
 
-    void solvePeriodicNodalLines(MultiFab &field,
-                                 MultiFab const &rhs,
-                                 int solve_dir,
-                                 Real diag,
-                                 int pec_normal,
-                                 int pec_location,
-                                 int e_comp,
-                                 std::string const &solver_name)
+    // Map packed index (0..nsolve-1) to local offset along solve_dir, skipping PEC at iw.
+    // Order: 0..iw-1, iw+1..nsolve (no nearest-neighbor link across the gap).
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int packedPecGlobalIdx(int p, int iw) noexcept
+    {
+        return (p < iw) ? p : p + 1;
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int periodicLineGlobalIdx(int p, int iw) noexcept
+    {
+        return (iw < 0) ? p : packedPecGlobalIdx(p, iw);
+    }
+
+    // Periodic cyclic tridiagonal solve along solve_dir.
+    // interior_pec_iw < 0: full nodal line (hi duplicates lo); optional tangential PEC skip via pec_* / e_comp.
+    // interior_pec_iw >= 0: omit that interior PEC node and break coupling across the gap.
+    void solvePeriodicCyclicLines(MultiFab &field,
+                                MultiFab const &rhs,
+                                int solve_dir,
+                                Real diag,
+                                int interior_pec_iw,
+                                int pec_normal,
+                                int pec_location,
+                                int e_comp,
+                                std::string const &solver_name)
     {
         Box const domain = field.boxArray().minimalBox();
         int const lo = domain.smallEnd(solve_dir);
         int const hi = domain.bigEnd(solve_dir);
-        int const nsolve = hi - lo; // Nodal endpoint at hi duplicates the periodic node at lo.
+        bool const split_pec = interior_pec_iw >= 0;
+        int const nsolve = split_pec ? hi - lo - 1 : hi - lo;
+        int const iw = split_pec ? interior_pec_iw - lo : -1;
 
         bool const skip_pec_lines =
             pec_normal >= 0 && pec_location != 0 && e_comp != pec_normal &&
@@ -148,6 +166,14 @@ namespace
         int const pec_lo = skip_pec_lines ? domain.smallEnd(pec_normal) : 0;
         int const pec_hi = skip_pec_lines ? domain.bigEnd(pec_normal) : 0;
 
+        if (split_pec)
+        {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                iw > 0 && iw < nsolve,
+                (solver_name +
+                 " requires pec_location strictly interior along the implicit direction")
+                    .c_str());
+        }
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             nsolve > 2,
             (solver_name + " requires at least three unique points along the implicit direction")
@@ -161,6 +187,11 @@ namespace
         std::vector<Real> c_h(nsolve, -1.0_rt);
         a_h[0] = 0.0_rt;
         c_h[nsolve - 1] = 0.0_rt;
+        if (split_pec)
+        {
+            c_h[iw - 1] = 0.0_rt;
+            a_h[iw] = 0.0_rt;
+        }
 
         // bb is not the original diagonal b, but b with bb[0] = b[0] - gamma and bb[n-1] = b[n-1] - alpha * beta / gamma
         // this is modification for Sherman–Morrison formula
@@ -193,10 +224,7 @@ namespace
             if (solve_dir == 0)
             {
                 Box const b2d = amrex::makeSlab(bx, 0, lo);
-                // nlines = jlen * klen; need them since all j, k are solved in parallel
                 Long const nlines = b2d.numPts();
-                // declaring vectors all at once
-                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const jlo = b2d.smallEnd(1);
@@ -221,28 +249,30 @@ namespace
                     Real *x = dprime + nsolve;
                     Real *z = x + nsolve;
 
-                    for (int ii = 0; ii < nsolve; ++ii)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        x[ii] = field_arr(lo + ii, j, k);
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        x[p] = field_arr(lo + g, j, k);
                     }
-                    
-                    // using cyclic tridiagonal by Sherman–Morrison formula
+
                     solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, nsolve);
 
-                    for (int ii = 0; ii < nsolve; ++ii)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        field_arr(lo + ii, j, k) = x[ii];
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        field_arr(lo + g, j, k) = x[p];
+                    }
+                    if (split_pec)
+                    {
+                        field_arr(interior_pec_iw, j, k) = 0.0_rt;
                     }
                     field_arr(hi, j, k) = x[0]; });
             }
             else if (solve_dir == 1)
             {
                 Box const b2d = amrex::makeSlab(bx, 1, lo);
-                // nlines = ilen * klen; need them since all i, k are solved in parallel
                 Long const nlines = b2d.numPts();
-                // declaring vectors all at once
-                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
@@ -267,28 +297,30 @@ namespace
                     Real *x = dprime + nsolve;
                     Real *z = x + nsolve;
 
-                    for (int jj = 0; jj < nsolve; ++jj)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        x[jj] = field_arr(i, lo + jj, k);
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        x[p] = field_arr(i, lo + g, k);
                     }
 
-                    // using cyclic tridiagonal by Sherman–Morrison formula
                     solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, nsolve);
 
-                    for (int jj = 0; jj < nsolve; ++jj)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        field_arr(i, lo + jj, k) = x[jj];
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        field_arr(i, lo + g, k) = x[p];
+                    }
+                    if (split_pec)
+                    {
+                        field_arr(i, interior_pec_iw, k) = 0.0_rt;
                     }
                     field_arr(i, hi, k) = x[0]; });
             }
             else if (solve_dir == 2)
             {
                 Box const b2d = amrex::makeSlab(bx, 2, lo);
-                // nlines = ilen * jlen; need them since all i, j are solved in parallel
                 Long const nlines = b2d.numPts();
-                // declaring vectors all at once
-                // [cprime, dprime, x, z]
                 Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
@@ -313,18 +345,23 @@ namespace
                     Real *x = dprime + nsolve;
                     Real *z = x + nsolve;
 
-                    for (int kk = 0; kk < nsolve; ++kk)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        x[kk] = field_arr(i, j, lo + kk);
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        x[p] = field_arr(i, j, lo + g);
                     }
 
-                    // using cyclic tridiagonal by Sherman–Morrison formula
                     solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, nsolve);
 
-                    for (int kk = 0; kk < nsolve; ++kk)
+                    for (int p = 0; p < nsolve; ++p)
                     {
-                        field_arr(i, j, lo + kk) = x[kk];
+                        int const g = periodicLineGlobalIdx(p, iw);
+                        field_arr(i, j, lo + g) = x[p];
+                    }
+                    if (split_pec)
+                    {
+                        field_arr(i, j, interior_pec_iw) = 0.0_rt;
                     }
                     field_arr(i, j, hi) = x[0]; });
             }
@@ -479,212 +516,6 @@ namespace
         }
     }
 
-    // Map packed index (0..nsolve-1) to local offset along solve_dir, skipping PEC at iw.
-    // Order: 0..iw-1, iw+1..nsolve (no nearest-neighbor link across the gap).
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int packedPecGlobalIdx(int p, int iw) noexcept
-    {
-        return (p < iw) ? p : p + 1;
-    }
-
-    // Periodic implicit solve along solve_dir with interior Dirichlet PEC at pec_iw.
-    // Unknowns omit the PEC node; periodic coupling is kept between domain endpoints.
-    void solvePeriodicSplitPecLines(MultiFab &field,
-                                    MultiFab const &rhs,
-                                    int solve_dir,
-                                    Real diag,
-                                    int pec_iw,
-                                    std::string const &solver_name)
-    {
-        Box const domain = field.boxArray().minimalBox();
-        int const lo = domain.smallEnd(solve_dir);
-        int const hi = domain.bigEnd(solve_dir);
-        int const nsolve = hi - lo - 1; // unknowns omitting interior PEC node
-        int const iw = pec_iw - lo;
-
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            iw > 0 && iw < nsolve,
-            (solver_name + " requires pec_location strictly interior along the implicit direction")
-                .c_str());
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            nsolve > 2,
-            (solver_name +
-             " requires at least three unique points along the implicit direction after PEC")
-                .c_str());
-
-        Real const alpha = -1.0_rt;
-        Real const beta = -1.0_rt;
-
-        std::vector<Real> a_h(nsolve, -1.0_rt);
-        std::vector<Real> bb_h(nsolve, diag);
-        std::vector<Real> c_h(nsolve, -1.0_rt);
-        a_h[0] = 0.0_rt;
-        c_h[nsolve - 1] = 0.0_rt;
-
-        Real const gamma = -bb_h[0];
-        bb_h[0] -= gamma;
-        bb_h[nsolve - 1] -= alpha * beta / gamma;
-
-        Gpu::DeviceVector<Real> a_tpl(nsolve);
-        Gpu::DeviceVector<Real> bb_tpl(nsolve);
-        Gpu::DeviceVector<Real> c_tpl(nsolve);
-        Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_tpl.begin());
-        Gpu::copyAsync(Gpu::hostToDevice, bb_h.begin(), bb_h.end(), bb_tpl.begin());
-        Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_tpl.begin());
-        Gpu::streamSynchronize();
-
-        Real const *a_tpl_p = a_tpl.data();
-        Real const *bb_tpl_p = bb_tpl.data();
-        Real const *c_tpl_p = c_tpl.data();
-
-        field.ParallelCopy(rhs, 0, 0, 1);
-
-        constexpr int n_line_work = 7; // a, bb, c, cprime, dprime, x, z
-
-        for (MFIter mfi(field); mfi.isValid(); ++mfi)
-        {
-            Box const &bx = mfi.validbox();
-            amrex::ignore_unused(solver_name);
-            auto const &field_arr = field.array(mfi);
-
-            if (solve_dir == 0)
-            {
-                Box const b2d = amrex::makeSlab(bx, 0, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Real *work = line_work.data();
-                int const jlo = b2d.smallEnd(1);
-                int const klo = b2d.smallEnd(2);
-                int const jlen = b2d.length(1);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
-                                      {
-                    int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *a_l = work + line_id * nsolve * n_line_work;
-                    Real *bb_l = a_l + nsolve;
-                    Real *c_l = bb_l + nsolve;
-                    Real *cprime = c_l + nsolve;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        a_l[p] = a_tpl_p[p];
-                        bb_l[p] = bb_tpl_p[p];
-                        c_l[p] = c_tpl_p[p];
-                        int const g = packedPecGlobalIdx(p, iw);
-                        x[p] = field_arr(lo + g, j, k);
-                    }
-
-                    // Remove nearest-neighbor coupling across the interior PEC gap.
-                    c_l[iw - 1] = 0.0_rt;
-                    a_l[iw] = 0.0_rt;
-
-                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const g = packedPecGlobalIdx(p, iw);
-                        field_arr(lo + g, j, k) = x[p];
-                    }
-                    field_arr(pec_iw, j, k) = 0.0_rt;
-                    field_arr(hi, j, k) = x[0]; });
-            }
-            else if (solve_dir == 1)
-            {
-                Box const b2d = amrex::makeSlab(bx, 1, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Real *work = line_work.data();
-                int const ilo = b2d.smallEnd(0);
-                int const klo = b2d.smallEnd(2);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
-                                      {
-                    int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *a_l = work + line_id * nsolve * n_line_work;
-                    Real *bb_l = a_l + nsolve;
-                    Real *c_l = bb_l + nsolve;
-                    Real *cprime = c_l + nsolve;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        a_l[p] = a_tpl_p[p];
-                        bb_l[p] = bb_tpl_p[p];
-                        c_l[p] = c_tpl_p[p];
-                        int const g = packedPecGlobalIdx(p, iw);
-                        x[p] = field_arr(i, lo + g, k);
-                    }
-
-                    c_l[iw - 1] = 0.0_rt;
-                    a_l[iw] = 0.0_rt;
-
-                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const g = packedPecGlobalIdx(p, iw);
-                        field_arr(i, lo + g, k) = x[p];
-                    }
-                    field_arr(i, pec_iw, k) = 0.0_rt;
-                    field_arr(i, hi, k) = x[0]; });
-            }
-            else if (solve_dir == 2)
-            {
-                Box const b2d = amrex::makeSlab(bx, 2, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Real *work = line_work.data();
-                int const ilo = b2d.smallEnd(0);
-                int const jlo = b2d.smallEnd(1);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                                      {
-                    int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *a_l = work + line_id * nsolve * n_line_work;
-                    Real *bb_l = a_l + nsolve;
-                    Real *c_l = bb_l + nsolve;
-                    Real *cprime = c_l + nsolve;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        a_l[p] = a_tpl_p[p];
-                        bb_l[p] = bb_tpl_p[p];
-                        c_l[p] = c_tpl_p[p];
-                        int const g = packedPecGlobalIdx(p, iw);
-                        x[p] = field_arr(i, j, lo + g);
-                    }
-
-                    c_l[iw - 1] = 0.0_rt;
-                    a_l[iw] = 0.0_rt;
-
-                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const g = packedPecGlobalIdx(p, iw);
-                        field_arr(i, j, lo + g) = x[p];
-                    }
-                    field_arr(i, j, pec_iw) = 0.0_rt;
-                    field_arr(i, j, hi) = x[0]; });
-            }
-            else
-            {
-                amrex::Abort("solve_dir must be 0, 1, or 2");
-            }
-        }
-    }
 } // namespace
 
 ADI::ADI()
@@ -1106,12 +937,12 @@ void ADI::solveImplicitEx1(MultiFab &ex, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 1)
     {
-        solvePeriodicSplitPecLines(ex, rhs, 1, diag, m_pec_location, "solveImplicitEx1");
+        solvePeriodicCyclicLines(ex, rhs, 1, diag, m_pec_location, -1, 0, -1, "solveImplicitEx1");
     }
     else
     {
-        solvePeriodicNodalLines(ex, rhs, 1, diag, m_pec_normal, m_pec_location, 0,
-                                "solveImplicitEx1");
+        solvePeriodicCyclicLines(ex, rhs, 1, diag, -1, m_pec_normal, m_pec_location, 0,
+                                 "solveImplicitEx1");
     }
 }
 
@@ -1126,12 +957,12 @@ void ADI::solveImplicitEy1(MultiFab &ey, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 2)
     {
-        solvePeriodicSplitPecLines(ey, rhs, 2, diag, m_pec_location, "solveImplicitEy1");
+        solvePeriodicCyclicLines(ey, rhs, 2, diag, m_pec_location, -1, 0, -1, "solveImplicitEy1");
     }
     else
     {
-        solvePeriodicNodalLines(ey, rhs, 2, diag, m_pec_normal, m_pec_location, 1,
-                                "solveImplicitEy1");
+        solvePeriodicCyclicLines(ey, rhs, 2, diag, -1, m_pec_normal, m_pec_location, 1,
+                                 "solveImplicitEy1");
     }
 }
 
@@ -1146,12 +977,12 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 0)
     {
-        solvePeriodicSplitPecLines(ez, rhs, 0, diag, m_pec_location, "solveImplicitEz1");
+        solvePeriodicCyclicLines(ez, rhs, 0, diag, m_pec_location, -1, 0, -1, "solveImplicitEz1");
     }
     else
     {
-        solvePeriodicNodalLines(ez, rhs, 0, diag, m_pec_normal, m_pec_location, 2,
-                                "solveImplicitEz1");
+        solvePeriodicCyclicLines(ez, rhs, 0, diag, -1, m_pec_normal, m_pec_location, 2,
+                                 "solveImplicitEz1");
     }
 }
 
@@ -1295,12 +1126,12 @@ void ADI::solveImplicitEx2(MultiFab &ex, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 2)
     {
-        solvePeriodicSplitPecLines(ex, rhs, 2, diag, m_pec_location, "solveImplicitEx2");
+        solvePeriodicCyclicLines(ex, rhs, 2, diag, m_pec_location, -1, 0, -1, "solveImplicitEx2");
     }
     else
     {
-        solvePeriodicNodalLines(ex, rhs, 2, diag, m_pec_normal, m_pec_location, 0,
-                                "solveImplicitEx2");
+        solvePeriodicCyclicLines(ex, rhs, 2, diag, -1, m_pec_normal, m_pec_location, 0,
+                                 "solveImplicitEx2");
     }
 }
 
@@ -1315,12 +1146,12 @@ void ADI::solveImplicitEy2(MultiFab &ey, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 0)
     {
-        solvePeriodicSplitPecLines(ey, rhs, 0, diag, m_pec_location, "solveImplicitEy2");
+        solvePeriodicCyclicLines(ey, rhs, 0, diag, m_pec_location, -1, 0, -1, "solveImplicitEy2");
     }
     else
     {
-        solvePeriodicNodalLines(ey, rhs, 0, diag, m_pec_normal, m_pec_location, 1,
-                                "solveImplicitEy2");
+        solvePeriodicCyclicLines(ey, rhs, 0, diag, -1, m_pec_normal, m_pec_location, 1,
+                                 "solveImplicitEy2");
     }
 }
 
@@ -1335,12 +1166,12 @@ void ADI::solveImplicitEz2(MultiFab &ez, MultiFab const &rhs, Real dt) const
     }
     else if (m_pec_location != 0 && m_pec_normal == 1)
     {
-        solvePeriodicSplitPecLines(ez, rhs, 1, diag, m_pec_location, "solveImplicitEz2");
+        solvePeriodicCyclicLines(ez, rhs, 1, diag, m_pec_location, -1, 0, -1, "solveImplicitEz2");
     }
     else
     {
-        solvePeriodicNodalLines(ez, rhs, 1, diag, m_pec_normal, m_pec_location, 2,
-                                "solveImplicitEz2");
+        solvePeriodicCyclicLines(ez, rhs, 1, diag, -1, m_pec_normal, m_pec_location, 2,
+                                 "solveImplicitEz2");
     }
 }
 
