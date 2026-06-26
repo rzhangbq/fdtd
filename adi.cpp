@@ -479,14 +479,15 @@ namespace
         }
     }
 
+    // Map packed index (0..nsolve-2) to local offset along solve_dir, skipping PEC at iw.
+    // Order: 0..iw-1, iw+1..nsolve-1 (no nearest-neighbor link across the gap).
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int packedPecGlobalIdx(int p, int iw) noexcept
     {
         return (p < iw) ? p : p + 1;
     }
 
     // Periodic implicit solve along solve_dir with interior Dirichlet PEC at pec_iw.
-    // Unknowns are packed into a cyclic line of length nsolve-1 that skips the PEC node
-    // but keeps periodic coupling between the domain endpoints.
+    // Unknowns omit the PEC node; periodic coupling is kept between domain endpoints.
     void solvePeriodicSplitPecLines(MultiFab &field,
                                     MultiFab const &rhs,
                                     int solve_dir,
@@ -524,21 +525,21 @@ namespace
         bb_h[0] -= gamma;
         bb_h[npack - 1] -= alpha * beta / gamma;
 
-        Gpu::DeviceVector<Real> a_d(npack);
-        Gpu::DeviceVector<Real> bb_d(npack);
-        Gpu::DeviceVector<Real> c_d(npack);
-        Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_d.begin());
-        Gpu::copyAsync(Gpu::hostToDevice, bb_h.begin(), bb_h.end(), bb_d.begin());
-        Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_d.begin());
+        Gpu::DeviceVector<Real> a_tpl(npack);
+        Gpu::DeviceVector<Real> bb_tpl(npack);
+        Gpu::DeviceVector<Real> c_tpl(npack);
+        Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_tpl.begin());
+        Gpu::copyAsync(Gpu::hostToDevice, bb_h.begin(), bb_h.end(), bb_tpl.begin());
+        Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_tpl.begin());
         Gpu::streamSynchronize();
 
-        Real const *a = a_d.data();
-        Real const *bb = bb_d.data();
-        Real const *c = c_d.data();
+        Real const *a_tpl_p = a_tpl.data();
+        Real const *bb_tpl_p = bb_tpl.data();
+        Real const *c_tpl_p = c_tpl.data();
 
         field.ParallelCopy(rhs, 0, 0, 1);
 
-        constexpr int n_line_work = 4; // cprime, dprime, x, z
+        constexpr int n_line_work = 7; // a, bb, c, cprime, dprime, x, z
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
         {
@@ -559,18 +560,28 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
                                       {
                     int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *cprime = work + line_id * npack * n_line_work;
+                    Real *a_l = work + line_id * npack * n_line_work;
+                    Real *bb_l = a_l + npack;
+                    Real *c_l = bb_l + npack;
+                    Real *cprime = c_l + npack;
                     Real *dprime = cprime + npack;
                     Real *x = dprime + npack;
                     Real *z = x + npack;
 
                     for (int p = 0; p < npack; ++p)
                     {
+                        a_l[p] = a_tpl_p[p];
+                        bb_l[p] = bb_tpl_p[p];
+                        c_l[p] = c_tpl_p[p];
                         int const g = packedPecGlobalIdx(p, iw);
                         x[p] = field_arr(lo + g, j, k);
                     }
 
-                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                    // Remove nearest-neighbor coupling across the interior PEC gap.
+                    c_l[iw - 1] = 0.0_rt;
+                    a_l[iw] = 0.0_rt;
+
+                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, npack);
 
                     for (int p = 0; p < npack; ++p)
@@ -594,18 +605,27 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
                                       {
                     int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *cprime = work + line_id * npack * n_line_work;
+                    Real *a_l = work + line_id * npack * n_line_work;
+                    Real *bb_l = a_l + npack;
+                    Real *c_l = bb_l + npack;
+                    Real *cprime = c_l + npack;
                     Real *dprime = cprime + npack;
                     Real *x = dprime + npack;
                     Real *z = x + npack;
 
                     for (int p = 0; p < npack; ++p)
                     {
+                        a_l[p] = a_tpl_p[p];
+                        bb_l[p] = bb_tpl_p[p];
+                        c_l[p] = c_tpl_p[p];
                         int const g = packedPecGlobalIdx(p, iw);
                         x[p] = field_arr(i, lo + g, k);
                     }
 
-                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                    c_l[iw - 1] = 0.0_rt;
+                    a_l[iw] = 0.0_rt;
+
+                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, npack);
 
                     for (int p = 0; p < npack; ++p)
@@ -629,18 +649,27 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                                       {
                     int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *cprime = work + line_id * npack * n_line_work;
+                    Real *a_l = work + line_id * npack * n_line_work;
+                    Real *bb_l = a_l + npack;
+                    Real *c_l = bb_l + npack;
+                    Real *cprime = c_l + npack;
                     Real *dprime = cprime + npack;
                     Real *x = dprime + npack;
                     Real *z = x + npack;
 
                     for (int p = 0; p < npack; ++p)
                     {
+                        a_l[p] = a_tpl_p[p];
+                        bb_l[p] = bb_tpl_p[p];
+                        c_l[p] = c_tpl_p[p];
                         int const g = packedPecGlobalIdx(p, iw);
                         x[p] = field_arr(i, j, lo + g);
                     }
 
-                    solveCyclicTridiagonal(a, bb, c, alpha, beta, gamma, x, x,
+                    c_l[iw - 1] = 0.0_rt;
+                    a_l[iw] = 0.0_rt;
+
+                    solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
                                            cprime, dprime, z, npack);
 
                     for (int p = 0; p < npack; ++p)
