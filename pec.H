@@ -21,8 +21,30 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool PecOnWallPlane(int pec_normal, int
     return k == pec_lo || k == pec_hi;
 }
 
-// Skip implicit / explicit E update and pin to zero on PEC wall planes.
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool PecSkipEupdate(int pec_normal, int e_comp,
+// pec_location: 0 => wall PEC at pec_lo/pec_hi; otherwise interior PEC at that index.
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool PecOnPlane(int pec_normal, int pec_location,
+                                                       int pec_lo, int pec_hi, int i, int j,
+                                                       int k) noexcept
+{
+    if (pec_location == 0)
+    {
+        return PecOnWallPlane(pec_normal, pec_lo, pec_hi, i, j, k);
+    }
+
+    if (pec_normal == 0)
+    {
+        return i == pec_location;
+    }
+    if (pec_normal == 1)
+    {
+        return j == pec_location;
+    }
+    return k == pec_location;
+}
+
+// Skip implicit / explicit E update and pin to zero on PEC planes.
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool PecSkipEupdate(int pec_normal, int pec_location,
+                                                             int e_comp,
                                                              bool nodal_on_pec_normal,
                                                              int pec_lo, int pec_hi, int i,
                                                              int j, int k) noexcept
@@ -31,11 +53,11 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool PecSkipEupdate(int pec_normal, int
     {
         return false;
     }
-    return PecOnWallPlane(pec_normal, pec_lo, pec_hi, i, j, k);
+    return PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, i, j, k);
 }
 
-// Pin tangential nodal E to zero on PEC walls (used once after initial data).
-void PecPinTangentialEwalls(int pec_normal,
-                            amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields);
+// Pin tangential nodal E to zero on PEC planes (walls or interior).
+void PecPinTangentialE(int pec_normal, int pec_location,
+                       amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields);
 
 #endif

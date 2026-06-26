@@ -47,10 +47,27 @@ FDTD::FDTD()
         amrex::Abort("fdtd.pec_normal must be -1 (none) or 0, 1, 2");
     }
 
+    m_pec_location = 0;
+    pp.query("pec_location", m_pec_location);
+    if (m_pec_location != 0 && m_pec_normal < 0)
+    {
+        amrex::Abort("fdtd.pec_location requires fdtd.pec_normal >= 0");
+    }
+
     Box domain(IntVect(0), m_n_cells - 1);
+    if (m_pec_location != 0)
+    {
+        int const pec_lo = domain.smallEnd(m_pec_normal);
+        int const pec_hi = domain.bigEnd(m_pec_normal);
+        if (m_pec_location <= pec_lo || m_pec_location >= pec_hi)
+        {
+            amrex::Abort("fdtd.pec_location must be strictly interior along fdtd.pec_normal");
+        }
+    }
+
     RealBox real_box(prob_lo.begin(), prob_hi.begin());
     Array<int, AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(1, 1, 1)};
-    if (m_pec_normal >= 0)
+    if (m_pec_normal >= 0 && m_pec_location == 0)
     {
         is_periodic[m_pec_normal] = 0;
     }
@@ -80,7 +97,7 @@ void FDTD::initData()
     InitSetupFields("fdtd", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
                     m_geom, m_efields, m_bfields);
-    PecPinTangentialEwalls(m_pec_normal, m_efields);
+    PecPinTangentialE(m_pec_normal, m_pec_location, m_efields);
 }
 
 void FDTD::evolve()
@@ -102,6 +119,7 @@ void FDTD::evolve()
     Vector<MultiFab *> bfields{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
 
     int const pec = m_pec_normal;
+    int const pec_loc = m_pec_location;
     Box const ex_box = m_efields[0].boxArray().minimalBox();
     Box const ey_box = m_efields[1].boxArray().minimalBox();
     Box const ez_box = m_efields[2].boxArray().minimalBox();
@@ -147,7 +165,7 @@ void FDTD::evolve()
 
         ParallelFor(m_efields[0], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            if (PecSkipEupdate(pec, 0, ex_nodal_on_pec, ex_plo, ex_phi, i, j, k))
+            if (PecSkipEupdate(pec, pec_loc, 0, ex_nodal_on_pec, ex_plo, ex_phi, i, j, k))
             {
                 ex[b](i, j, k) = 0.0_rt;
                 return;
@@ -156,7 +174,7 @@ void FDTD::evolve()
                                         dxinv[2] * (by[b](i, j, k) - by[b](i, j, k - 1))); });
         ParallelFor(m_efields[1], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            if (PecSkipEupdate(pec, 1, ey_nodal_on_pec, ey_plo, ey_phi, i, j, k))
+            if (PecSkipEupdate(pec, pec_loc, 1, ey_nodal_on_pec, ey_plo, ey_phi, i, j, k))
             {
                 ey[b](i, j, k) = 0.0_rt;
                 return;
@@ -165,7 +183,7 @@ void FDTD::evolve()
                                         dxinv[0] * (bz[b](i, j, k) - bz[b](i - 1, j, k))); });
         ParallelFor(m_efields[2], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
-            if (PecSkipEupdate(pec, 2, ez_nodal_on_pec, ez_plo, ez_phi, i, j, k))
+            if (PecSkipEupdate(pec, pec_loc, 2, ez_nodal_on_pec, ez_plo, ez_phi, i, j, k))
             {
                 ez[b](i, j, k) = 0.0_rt;
                 return;

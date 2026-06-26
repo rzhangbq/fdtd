@@ -40,6 +40,8 @@ private:
 
     // PEC walls normal to this direction (0=x, 1=y, 2=z); -1 = fully periodic.
     int m_pec_normal = -1;
+    // 0 = PEC on domain faces normal to pec_normal; else interior PEC at this index.
+    int m_pec_location = 0;
 
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_efields;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_bfields;

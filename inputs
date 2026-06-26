@@ -14,6 +14,8 @@ adi.dt = -1              # fixed timestep [s] (<0 => use adi.cfl)
 # PEC walls on the two faces normal to this direction (0=x, 1=y, 2=z).
 # Use -1 for fully periodic boundaries (default).
 adi.pec_normal = -1
+# 0 = PEC on domain faces; any other integer = interior PEC at that index (all faces periodic).
+adi.pec_location = 0
 
 # Initial condition options:
 #   sinwave        : traveling sinusoidal plane wave
