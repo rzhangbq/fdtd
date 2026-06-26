@@ -479,8 +479,8 @@ namespace
         }
     }
 
-    // Map packed index (0..nsolve-2) to local offset along solve_dir, skipping PEC at iw.
-    // Order: 0..iw-1, iw+1..nsolve-1 (no nearest-neighbor link across the gap).
+    // Map packed index (0..nsolve-1) to local offset along solve_dir, skipping PEC at iw.
+    // Order: 0..iw-1, iw+1..nsolve (no nearest-neighbor link across the gap).
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int packedPecGlobalIdx(int p, int iw) noexcept
     {
         return (p < iw) ? p : p + 1;
@@ -498,16 +498,15 @@ namespace
         Box const domain = field.boxArray().minimalBox();
         int const lo = domain.smallEnd(solve_dir);
         int const hi = domain.bigEnd(solve_dir);
-        int const nsolve = hi - lo;
+        int const nsolve = hi - lo - 1; // unknowns omitting interior PEC node
         int const iw = pec_iw - lo;
-        int const npack = nsolve - 1;
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            iw > 0 && iw < nsolve - 1,
+            iw > 0 && iw < nsolve,
             (solver_name + " requires pec_location strictly interior along the implicit direction")
                 .c_str());
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            npack > 2,
+            nsolve > 2,
             (solver_name +
              " requires at least three unique points along the implicit direction after PEC")
                 .c_str());
@@ -515,19 +514,19 @@ namespace
         Real const alpha = -1.0_rt;
         Real const beta = -1.0_rt;
 
-        std::vector<Real> a_h(npack, -1.0_rt);
-        std::vector<Real> bb_h(npack, diag);
-        std::vector<Real> c_h(npack, -1.0_rt);
+        std::vector<Real> a_h(nsolve, -1.0_rt);
+        std::vector<Real> bb_h(nsolve, diag);
+        std::vector<Real> c_h(nsolve, -1.0_rt);
         a_h[0] = 0.0_rt;
-        c_h[npack - 1] = 0.0_rt;
+        c_h[nsolve - 1] = 0.0_rt;
 
         Real const gamma = -bb_h[0];
         bb_h[0] -= gamma;
-        bb_h[npack - 1] -= alpha * beta / gamma;
+        bb_h[nsolve - 1] -= alpha * beta / gamma;
 
-        Gpu::DeviceVector<Real> a_tpl(npack);
-        Gpu::DeviceVector<Real> bb_tpl(npack);
-        Gpu::DeviceVector<Real> c_tpl(npack);
+        Gpu::DeviceVector<Real> a_tpl(nsolve);
+        Gpu::DeviceVector<Real> bb_tpl(nsolve);
+        Gpu::DeviceVector<Real> c_tpl(nsolve);
         Gpu::copyAsync(Gpu::hostToDevice, a_h.begin(), a_h.end(), a_tpl.begin());
         Gpu::copyAsync(Gpu::hostToDevice, bb_h.begin(), bb_h.end(), bb_tpl.begin());
         Gpu::copyAsync(Gpu::hostToDevice, c_h.begin(), c_h.end(), c_tpl.begin());
@@ -551,7 +550,7 @@ namespace
             {
                 Box const b2d = amrex::makeSlab(bx, 0, lo);
                 Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * npack * n_line_work);
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const jlo = b2d.smallEnd(1);
                 int const klo = b2d.smallEnd(2);
@@ -560,15 +559,15 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
                                       {
                     int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *a_l = work + line_id * npack * n_line_work;
-                    Real *bb_l = a_l + npack;
-                    Real *c_l = bb_l + npack;
-                    Real *cprime = c_l + npack;
-                    Real *dprime = cprime + npack;
-                    Real *x = dprime + npack;
-                    Real *z = x + npack;
+                    Real *a_l = work + line_id * nsolve * n_line_work;
+                    Real *bb_l = a_l + nsolve;
+                    Real *c_l = bb_l + nsolve;
+                    Real *cprime = c_l + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         a_l[p] = a_tpl_p[p];
                         bb_l[p] = bb_tpl_p[p];
@@ -582,9 +581,9 @@ namespace
                     a_l[iw] = 0.0_rt;
 
                     solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, npack);
+                                           cprime, dprime, z, nsolve);
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         int const g = packedPecGlobalIdx(p, iw);
                         field_arr(lo + g, j, k) = x[p];
@@ -596,7 +595,7 @@ namespace
             {
                 Box const b2d = amrex::makeSlab(bx, 1, lo);
                 Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * npack * n_line_work);
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
                 int const klo = b2d.smallEnd(2);
@@ -605,15 +604,15 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
                                       {
                     int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *a_l = work + line_id * npack * n_line_work;
-                    Real *bb_l = a_l + npack;
-                    Real *c_l = bb_l + npack;
-                    Real *cprime = c_l + npack;
-                    Real *dprime = cprime + npack;
-                    Real *x = dprime + npack;
-                    Real *z = x + npack;
+                    Real *a_l = work + line_id * nsolve * n_line_work;
+                    Real *bb_l = a_l + nsolve;
+                    Real *c_l = bb_l + nsolve;
+                    Real *cprime = c_l + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         a_l[p] = a_tpl_p[p];
                         bb_l[p] = bb_tpl_p[p];
@@ -626,9 +625,9 @@ namespace
                     a_l[iw] = 0.0_rt;
 
                     solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, npack);
+                                           cprime, dprime, z, nsolve);
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         int const g = packedPecGlobalIdx(p, iw);
                         field_arr(i, lo + g, k) = x[p];
@@ -640,7 +639,7 @@ namespace
             {
                 Box const b2d = amrex::makeSlab(bx, 2, lo);
                 Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * npack * n_line_work);
+                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
                 Real *work = line_work.data();
                 int const ilo = b2d.smallEnd(0);
                 int const jlo = b2d.smallEnd(1);
@@ -649,15 +648,15 @@ namespace
                 amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                                       {
                     int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *a_l = work + line_id * npack * n_line_work;
-                    Real *bb_l = a_l + npack;
-                    Real *c_l = bb_l + npack;
-                    Real *cprime = c_l + npack;
-                    Real *dprime = cprime + npack;
-                    Real *x = dprime + npack;
-                    Real *z = x + npack;
+                    Real *a_l = work + line_id * nsolve * n_line_work;
+                    Real *bb_l = a_l + nsolve;
+                    Real *c_l = bb_l + nsolve;
+                    Real *cprime = c_l + nsolve;
+                    Real *dprime = cprime + nsolve;
+                    Real *x = dprime + nsolve;
+                    Real *z = x + nsolve;
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         a_l[p] = a_tpl_p[p];
                         bb_l[p] = bb_tpl_p[p];
@@ -670,9 +669,9 @@ namespace
                     a_l[iw] = 0.0_rt;
 
                     solveCyclicTridiagonal(a_l, bb_l, c_l, alpha, beta, gamma, x, x,
-                                           cprime, dprime, z, npack);
+                                           cprime, dprime, z, nsolve);
 
-                    for (int p = 0; p < npack; ++p)
+                    for (int p = 0; p < nsolve; ++p)
                     {
                         int const g = packedPecGlobalIdx(p, iw);
                         field_arr(i, j, lo + g) = x[p];
