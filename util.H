@@ -10,7 +10,8 @@
 void UtilBuildCellCenteredPlotMF(
     amrex::MultiFab &plotmf,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields);
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+    bool magnetic_input_is_h);
 
 void UtilWritePlotOutput(
     std::string const &plot_format,
@@ -23,6 +24,7 @@ void UtilWritePlotOutput(
     amrex::DistributionMapping const &dmap,
     amrex::Geometry const &geom,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields);
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+    bool magnetic_input_is_h);
 
 #endif

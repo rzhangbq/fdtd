@@ -7,12 +7,15 @@
 
 #include <fstream>
 #include <iomanip>
+#include <cmath>
 #include <sstream>
 
 using namespace amrex;
 
 namespace
 {
+    constexpr Real mu0 = 4.0 * M_PI * 1e-7;
+
     void writeVisitOutput(
         std::string const &output_dir,
         int step,
@@ -21,12 +24,13 @@ namespace
         DistributionMapping const &dmap,
         Geometry const &geom,
         Array<MultiFab, AMREX_SPACEDIM> const &efields,
-        Array<MultiFab, AMREX_SPACEDIM> const &bfields)
+        Array<MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+        bool magnetic_input_is_h)
     {
         MultiFab plotmf(grids, dmap, 6, 0);
-        UtilBuildCellCenteredPlotMF(plotmf, efields, bfields);
+        UtilBuildCellCenteredPlotMF(plotmf, efields, magnetic_fields, magnetic_input_is_h);
 
-        const Vector<std::string> varnames = {"Ex", "Ey", "Ez", "Bx", "By", "Bz"};
+        const Vector<std::string> varnames = {"Ex", "Ey", "Ez", "Hx", "Hy", "Hz"};
         const std::string plotfile = Concatenate(output_dir, step);
 
         if (ParallelDescriptor::MyProc() == 0)
@@ -47,10 +51,11 @@ namespace
         DistributionMapping const &dmap,
         Geometry const &geom,
         Array<MultiFab, AMREX_SPACEDIM> const &efields,
-        Array<MultiFab, AMREX_SPACEDIM> const &bfields)
+        Array<MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+        bool magnetic_input_is_h)
     {
         MultiFab plotmf(grids, dmap, 6, 0);
-        UtilBuildCellCenteredPlotMF(plotmf, efields, bfields);
+        UtilBuildCellCenteredPlotMF(plotmf, efields, magnetic_fields, magnetic_input_is_h);
 
         const Box &domain_box = geom.Domain();
         IntVect out_lo = domain_box.smallEnd();
@@ -136,7 +141,7 @@ namespace
         meta << "  \"shape\": [" << nx << ", " << ny << ", " << nz << ", " << ncomp << "],\n";
         meta << "  \"dtype\": \"float64\",\n";
         meta << "  \"layout\": \"C\",\n";
-        meta << "  \"components\": [\"Ex\", \"Ey\", \"Ez\", \"Bx\", \"By\", \"Bz\"],\n";
+        meta << "  \"components\": [\"Ex\", \"Ey\", \"Ez\", \"Hx\", \"Hy\", \"Hz\"],\n";
         meta << "  \"conv_plt\": " << (conv_plt ? "true" : "false") << ",\n";
         meta << "  \"line_axis\": " << ic_dir << ",\n";
         meta << "  \"fields_file\": \"" << bin_file << "\",\n";
@@ -149,15 +154,20 @@ namespace
 void UtilBuildCellCenteredPlotMF(
     MultiFab &plotmf,
     Array<MultiFab, AMREX_SPACEDIM> const &efields,
-    Array<MultiFab, AMREX_SPACEDIM> const &bfields)
+    Array<MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+    bool magnetic_input_is_h)
 {
     Vector<const MultiFab *> efield_ptrs{
         AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
-    Vector<const MultiFab *> bfield_ptrs{
-        AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
+    Vector<const MultiFab *> magnetic_field_ptrs{
+        AMREX_D_DECL(&magnetic_fields[0], &magnetic_fields[1], &magnetic_fields[2])};
 
     average_edge_to_cellcenter(plotmf, 0, efield_ptrs);
-    average_face_to_cellcenter(plotmf, 3, bfield_ptrs);
+    average_face_to_cellcenter(plotmf, 3, magnetic_field_ptrs);
+    if (!magnetic_input_is_h)
+    {
+        plotmf.mult(1.0_rt / mu0, 3, AMREX_SPACEDIM, 0);
+    }
 }
 
 void UtilWritePlotOutput(
@@ -171,15 +181,18 @@ void UtilWritePlotOutput(
     DistributionMapping const &dmap,
     Geometry const &geom,
     Array<MultiFab, AMREX_SPACEDIM> const &efields,
-    Array<MultiFab, AMREX_SPACEDIM> const &bfields)
+    Array<MultiFab, AMREX_SPACEDIM> const &magnetic_fields,
+    bool magnetic_input_is_h)
 {
     if (plot_format == "visit")
     {
-        writeVisitOutput(output_dir, step, time, grids, dmap, geom, efields, bfields);
+        writeVisitOutput(output_dir, step, time, grids, dmap, geom,
+                         efields, magnetic_fields, magnetic_input_is_h);
     }
     else
     {
         writeNumpyOutput(output_dir, step, time, conv_plt, ic_dir,
-                         grids, dmap, geom, efields, bfields);
+                         grids, dmap, geom, efields, magnetic_fields,
+                         magnetic_input_is_h);
     }
 }

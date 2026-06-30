@@ -18,27 +18,27 @@ public:
     void evolve();
 
     // First ADI half-step (eq:adi-first-half-amrex in notes/adi.tex)
-    void adiFirstHalfStep(FieldArray &efields, FieldArray &bfields,
+    void adiFirstHalfStep(FieldArray &efields, FieldArray &hfields,
                           FieldArray &efields_x, FieldArray &efields_y,
-                          FieldArray &efields_z, FieldArray &bfields_x,
-                          FieldArray &bfields_y, FieldArray &bfields_z,
+                          FieldArray &efields_z, FieldArray &hfields_x,
+                          FieldArray &hfields_y, FieldArray &hfields_z,
                           amrex::Real dt);
     // Second ADI half-step (eq:adi-second-half-amrex in notes/adi.tex)
-    void adiSecondHalfStep(FieldArray &efields, FieldArray &bfields,
+    void adiSecondHalfStep(FieldArray &efields, FieldArray &hfields,
                            FieldArray &efields_x, FieldArray &efields_y,
-                           FieldArray &efields_z, FieldArray &bfields_x,
-                           FieldArray &bfields_y, FieldArray &bfields_z,
+                           FieldArray &efields_z, FieldArray &hfields_x,
+                           FieldArray &hfields_y, FieldArray &hfields_z,
                            amrex::Real dt);
 
     // buildRhs / solveImplicit stubs (to be filled in later)
     amrex::MultiFab buildRhsEx1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     amrex::MultiFab buildRhsEy1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     amrex::MultiFab buildRhsEz1(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     void solveImplicitEx1(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
@@ -48,13 +48,13 @@ public:
                           amrex::Real dt) const;
 
     amrex::MultiFab buildRhsEx2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     amrex::MultiFab buildRhsEy2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     amrex::MultiFab buildRhsEz2(amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &efields,
-                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &bfields,
+                                amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> const &hfields,
                                 amrex::Real dt) const;
     void solveImplicitEx2(amrex::MultiFab &ex, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
@@ -64,20 +64,19 @@ public:
                           amrex::Real dt) const;
 
     // Internal helper updates for H += D_b curl E (magnetic field stored as H).
-    void stepBx(amrex::MultiFab &bx, amrex::MultiFab const &ey_src,
+    void stepHx(amrex::MultiFab &hx, amrex::MultiFab const &ey_src,
                 amrex::MultiFab const &ez_src,
                 amrex::Real dt);
-    void stepBy(amrex::MultiFab &by, amrex::MultiFab const &ez_src,
+    void stepHy(amrex::MultiFab &hy, amrex::MultiFab const &ez_src,
                 amrex::MultiFab const &ex_src,
                 amrex::Real dt);
-    void stepBz(amrex::MultiFab &bz, amrex::MultiFab const &ex_src,
+    void stepHz(amrex::MultiFab &hz, amrex::MultiFab const &ex_src,
                 amrex::MultiFab const &ey_src,
                 amrex::Real dt);
 
 private:
     void initMaterials();
     void updateMaterialCoeffs(amrex::Real dt);
-    void convertBtoH(amrex::Real dt);
 
     // Yee-staggered ADI half-step coefficients. Physical eps/mu/sigma are
     // read from inputs and folded into these fields at initialization/update.
@@ -94,7 +93,6 @@ private:
     amrex::Real m_block_mu_r = 1.0;
     amrex::Real m_block_sigma = 0.0;
     bool m_has_material_block = false;
-    bool m_magnetic_fields_are_h = false;
 
     amrex::IntVect m_n_cells;
     int m_max_grid_size = 64;
@@ -125,7 +123,7 @@ private:
     int m_pec_location = 0;
 
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_efields;
-    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_bfields;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_hfields;
 };
 
 #endif

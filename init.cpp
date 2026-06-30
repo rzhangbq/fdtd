@@ -9,6 +9,7 @@ using namespace amrex;
 namespace
 {
     constexpr Real c_light = 2.99792458e8;
+    constexpr Real mu0 = 4.0 * M_PI * 1e-7;
 
     // Return the physical coordinate in one direction for a field component that is
     // staggered on a Yee grid: half-cell shifted along its own component direction.
@@ -66,12 +67,13 @@ void InitSetupFields(
     Real mu_r,
     Geometry const &geom,
     Array<MultiFab, AMREX_SPACEDIM> &efields,
-    Array<MultiFab, AMREX_SPACEDIM> &bfields)
+    Array<MultiFab, AMREX_SPACEDIM> &magnetic_fields,
+    bool magnetic_fields_are_h)
 {
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         efields[idim].setVal(0);
-        bfields[idim].setVal(0);
+        magnetic_fields[idim].setVal(0);
     }
 
     const bool is_sinwave = (ic == "sinwave");
@@ -94,6 +96,8 @@ void InitSetupFields(
 
     Real E0 = ic_amplitude;
     Real const B0 = E0 * std::sqrt(eps_r * mu_r) / c_light;
+    Real const mu = mu0 * mu_r;
+    Real const M0 = magnetic_fields_are_h ? B0 / mu : B0;
     const int dir = ic_dir;
     const int pol = ic_pol;
     const int bdir = 3 - dir - pol;
@@ -113,25 +117,25 @@ void InitSetupFields(
 
         Real const x0 = pulse_center;
         auto const &ea = efields[pol].arrays();
-        auto const &ba = bfields[bdir].arrays();
+        auto const &ma = magnetic_fields[bdir].arrays();
 
         ParallelFor(efields[pol], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
             Real g = gaussian_plane_wave(pol, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
             ea[b](i, j, k) = E0 * g; });
 
-        // Sample the matched B field along ic_dir at B_bdir Yee locations.
-        ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
+        // Sample the matched magnetic field along ic_dir at H/B Yee locations.
+        ParallelFor(magnetic_fields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
             Real g = gaussian_plane_wave(bdir, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
-            ba[b](i, j, k) = bsign * B0 * g; });
+            ma[b](i, j, k) = bsign * M0 * g; });
     }
     else
     {
         Real const kw = k0;
 
         auto const &ea = efields[pol].arrays();
-        auto const &ba = bfields[bdir].arrays();
+        auto const &ma = magnetic_fields[bdir].arrays();
 
         ParallelFor(efields[pol], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
@@ -142,17 +146,18 @@ void InitSetupFields(
         if (is_sinwave)
         {
             // B = sqrt(mu*eps) k_hat x E for a +dir traveling wave at t=0.
-            ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
+            ParallelFor(magnetic_fields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                         {
                 Real phase_coord = staggered_coord(bdir, dir, i, j, k, problo, ncells, dx);
                 Real s = std::sin(kw * phase_coord);
-                ba[b](i, j, k) = bsign * B0 * s; });
+                ma[b](i, j, k) = bsign * M0 * s; });
         }
-        // For a standing wave at t=0, initialize B to zero and only seed E.
+        // For a standing wave at t=0, initialize the magnetic field to zero and only seed E.
     }
 
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
-    Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
+    Vector<MultiFab *> magnetic_field_ptrs{
+        AMREX_D_DECL(&magnetic_fields[0], &magnetic_fields[1], &magnetic_fields[2])};
     amrex::FillBoundary(efield_ptrs, geom.periodicity());
-    amrex::FillBoundary(bfield_ptrs, geom.periodicity());
+    amrex::FillBoundary(magnetic_field_ptrs, geom.periodicity());
 }

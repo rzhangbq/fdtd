@@ -20,6 +20,7 @@ void InitSetupFields(
     amrex::Real mu_r,
     amrex::Geometry const &geom,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields,
-    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &bfields);
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &magnetic_fields,
+    bool magnetic_fields_are_h = false);
 
 #endif

@@ -784,7 +784,7 @@ ADI::ADI()
                                1, 1); // one component, one ghost
         IntVect btyp(0);              // cell-centerd by default
         btyp[idim] = 1;               // nodal in idim-direction
-        m_bfields[idim].define(amrex::convert(m_grids, btyp), m_dmap, 1, 1);
+        m_hfields[idim].define(amrex::convert(m_grids, btyp), m_dmap, 1, 1);
     }
 
     ParmParse pp_mat("adi");
@@ -890,29 +890,12 @@ void ADI::updateMaterialCoeffs(Real dt)
     amrex::FillBoundary(db_ptrs, period);
 }
 
-void ADI::convertBtoH(Real dt)
-{
-    if (m_magnetic_fields_are_h)
-    {
-        return;
-    }
-
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        auto const &dba = m_Db[idim].const_arrays();
-        auto const &ha = m_bfields[idim].arrays();
-        ParallelFor(m_bfields[idim], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
-                    { ha[b](i, j, k) *= 2.0_rt * dba[b](i, j, k) / dt; });
-    }
-    m_magnetic_fields_are_h = true;
-}
 
 void ADI::initData()
 {
     InitSetupFields("adi", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
-                    m_eps_r, m_mu_r, m_geom, m_efields, m_bfields);
-    m_magnetic_fields_are_h = false;
+                    m_eps_r, m_mu_r, m_geom, m_efields, m_hfields, true);
     PecPinTangentialE(m_pec_normal, m_pec_location, m_efields);
 }
 
@@ -937,7 +920,6 @@ void ADI::evolve()
     }
 
     updateMaterialCoeffs(dt);
-    convertBtoH(dt);
 
     Real time = 0.0_rt;
 
@@ -952,36 +934,37 @@ void ADI::evolve()
     DistributionMapping dmz(baz);
 
     FieldArray efields_x, efields_y, efields_z;
-    FieldArray bfields_x, bfields_y, bfields_z;
+    FieldArray hfields_x, hfields_y, hfields_z;
     definePencilFields(efields_x, m_efields, bax, dmx);
     definePencilFields(efields_y, m_efields, bay, dmy);
     definePencilFields(efields_z, m_efields, baz, dmz);
-    definePencilFields(bfields_x, m_bfields, bax, dmx);
-    definePencilFields(bfields_y, m_bfields, bay, dmy);
-    definePencilFields(bfields_z, m_bfields, baz, dmz);
+    definePencilFields(hfields_x, m_hfields, bax, dmx);
+    definePencilFields(hfields_y, m_hfields, bay, dmy);
+    definePencilFields(hfields_z, m_hfields, baz, dmz);
 
     // Initialize ghost values once before stepping.
     {
         auto const period = m_geom.periodicity();
         Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&m_efields[0], &m_efields[1], &m_efields[2])};
-        Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&m_bfields[0], &m_bfields[1], &m_bfields[2])};
+        Vector<MultiFab *> hfield_ptrs{AMREX_D_DECL(&m_hfields[0], &m_hfields[1], &m_hfields[2])};
         amrex::FillBoundary(efield_ptrs, period);
-        amrex::FillBoundary(bfield_ptrs, period);
+        amrex::FillBoundary(hfield_ptrs, period);
     }
 
     if (m_plot_int > 0)
     {
         UtilWritePlotOutput(m_plot_format, m_output_dir, 0, time,
                             m_conv_plt, m_ic_dir,
-                            m_grids, m_dmap, m_geom, m_efields, m_bfields);
+                            m_grids, m_dmap, m_geom, m_efields, m_hfields,
+                            true);
     }
 
     for (int step = 0; step < m_max_step; ++step)
     {
-        adiFirstHalfStep(m_efields, m_bfields, efields_x, efields_y,
-                         efields_z, bfields_x, bfields_y, bfields_z, dt);
-        adiSecondHalfStep(m_efields, m_bfields, efields_x, efields_y,
-                          efields_z, bfields_x, bfields_y, bfields_z, dt);
+        adiFirstHalfStep(m_efields, m_hfields, efields_x, efields_y,
+                         efields_z, hfields_x, hfields_y, hfields_z, dt);
+        adiSecondHalfStep(m_efields, m_hfields, efields_x, efields_y,
+                          efields_z, hfields_x, hfields_y, hfields_z, dt);
 
         time += dt;
 
@@ -989,36 +972,37 @@ void ADI::evolve()
         {
             UtilWritePlotOutput(m_plot_format, m_output_dir, step + 1, time,
                                 m_conv_plt, m_ic_dir,
-                                m_grids, m_dmap, m_geom, m_efields, m_bfields);
+                                m_grids, m_dmap, m_geom, m_efields, m_hfields,
+                                true);
         }
     }
 }
 
 void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
-                           Array<MultiFab, AMREX_SPACEDIM> &bfields,
+                           Array<MultiFab, AMREX_SPACEDIM> &hfields,
                            FieldArray &efields_x, FieldArray &efields_y,
-                           FieldArray &efields_z, FieldArray &bfields_x,
-                           FieldArray &bfields_y, FieldArray &bfields_z,
+                           FieldArray &efields_z, FieldArray &hfields_x,
+                           FieldArray &hfields_y, FieldArray &hfields_z,
                            Real dt)
 {
-    // eq:adi-first-half-amrex — implicit E along y,z,x; explicit B at n+1/2
+    // eq:adi-first-half-amrex — implicit E along y,z,x; explicit H at n+1/2
     auto const period = m_geom.periodicity();
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
-    Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
+    Vector<MultiFab *> hfield_ptrs{AMREX_D_DECL(&hfields[0], &hfields[1], &hfields[2])};
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
     copyFields(efields_y, efields, period);
-    copyFields(bfields_y, bfields, period);
-    MultiFab rhs_ex = buildRhsEx1(efields_y, bfields_y, dt);
+    copyFields(hfields_y, hfields, period);
+    MultiFab rhs_ex = buildRhsEx1(efields_y, hfields_y, dt);
 
     copyFields(efields_z, efields, period);
-    copyFields(bfields_z, bfields, period);
-    MultiFab rhs_ey = buildRhsEy1(efields_z, bfields_z, dt);
+    copyFields(hfields_z, hfields, period);
+    MultiFab rhs_ey = buildRhsEy1(efields_z, hfields_z, dt);
 
     copyFields(efields_x, efields, period);
-    copyFields(bfields_x, bfields, period);
-    MultiFab rhs_ez = buildRhsEz1(efields_x, bfields_x, dt);
+    copyFields(hfields_x, hfields, period);
+    MultiFab rhs_ez = buildRhsEz1(efields_x, hfields_x, dt);
 
     solveImplicitEx1(efields_y[0], rhs_ex, dt);
     solveImplicitEy1(efields_z[1], rhs_ey, dt);
@@ -1035,38 +1019,38 @@ void ADI::adiFirstHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
 
     PecPinTangentialE(m_pec_normal, m_pec_location, efields);
 
-    stepBx(bfields[0], efields[1], eold[2], dt);
-    stepBy(bfields[1], efields[2], eold[0], dt);
-    stepBz(bfields[2], efields[0], eold[1], dt);
+    stepHx(hfields[0], efields[1], eold[2], dt);
+    stepHy(hfields[1], efields[2], eold[0], dt);
+    stepHz(hfields[2], efields[0], eold[1], dt);
 
-    amrex::FillBoundary(bfield_ptrs, period);
+    amrex::FillBoundary(hfield_ptrs, period);
 }
 
 void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
-                            Array<MultiFab, AMREX_SPACEDIM> &bfields,
+                            Array<MultiFab, AMREX_SPACEDIM> &hfields,
                             FieldArray &efields_x, FieldArray &efields_y,
-                            FieldArray &efields_z, FieldArray &bfields_x,
-                            FieldArray &bfields_y, FieldArray &bfields_z,
+                            FieldArray &efields_z, FieldArray &hfields_x,
+                            FieldArray &hfields_y, FieldArray &hfields_z,
                             Real dt)
 {
-    // eq:adi-second-half-amrex — implicit E along z,x,y; explicit B at n+1
+    // eq:adi-second-half-amrex — implicit E along z,x,y; explicit H at n+1
     auto const period = m_geom.periodicity();
     Vector<MultiFab *> efield_ptrs{AMREX_D_DECL(&efields[0], &efields[1], &efields[2])};
-    Vector<MultiFab *> bfield_ptrs{AMREX_D_DECL(&bfields[0], &bfields[1], &bfields[2])};
+    Vector<MultiFab *> hfield_ptrs{AMREX_D_DECL(&hfields[0], &hfields[1], &hfields[2])};
 
     Array<MultiFab, AMREX_SPACEDIM> eold = copyFieldsWithGhosts(efields);
 
     copyFields(efields_z, efields, period);
-    copyFields(bfields_z, bfields, period);
-    MultiFab rhs_ex = buildRhsEx2(efields_z, bfields_z, dt);
+    copyFields(hfields_z, hfields, period);
+    MultiFab rhs_ex = buildRhsEx2(efields_z, hfields_z, dt);
 
     copyFields(efields_x, efields, period);
-    copyFields(bfields_x, bfields, period);
-    MultiFab rhs_ey = buildRhsEy2(efields_x, bfields_x, dt);
+    copyFields(hfields_x, hfields, period);
+    MultiFab rhs_ey = buildRhsEy2(efields_x, hfields_x, dt);
 
     copyFields(efields_y, efields, period);
-    copyFields(bfields_y, bfields, period);
-    MultiFab rhs_ez = buildRhsEz2(efields_y, bfields_y, dt);
+    copyFields(hfields_y, hfields, period);
+    MultiFab rhs_ez = buildRhsEz2(efields_y, hfields_y, dt);
 
     solveImplicitEx2(efields_z[0], rhs_ex, dt);
     solveImplicitEy2(efields_x[1], rhs_ey, dt);
@@ -1083,15 +1067,15 @@ void ADI::adiSecondHalfStep(Array<MultiFab, AMREX_SPACEDIM> &efields,
 
     PecPinTangentialE(m_pec_normal, m_pec_location, efields);
 
-    stepBx(bfields[0], eold[1], efields[2], dt);
-    stepBy(bfields[1], eold[2], efields[0], dt);
-    stepBz(bfields[2], eold[0], efields[1], dt);
+    stepHx(hfields[0], eold[1], efields[2], dt);
+    stepHy(hfields[1], eold[2], efields[0], dt);
+    stepHz(hfields[2], eold[0], efields[1], dt);
 
-    amrex::FillBoundary(bfield_ptrs, period);
+    amrex::FillBoundary(hfield_ptrs, period);
 }
 
 MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1119,8 +1103,8 @@ MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ey_arr = efields[1].const_array(mfi);
-        auto const &hz_arr = bfields[2].const_array(mfi);
-        auto const &hy_arr = bfields[1].const_array(mfi);
+        auto const &hz_arr = hfields[2].const_array(mfi);
+        auto const &hy_arr = hfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1138,7 +1122,7 @@ MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
 }
 
 MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1166,8 +1150,8 @@ MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ez_arr = efields[2].const_array(mfi);
-        auto const &hx_arr = bfields[0].const_array(mfi);
-        auto const &hz_arr = bfields[2].const_array(mfi);
+        auto const &hx_arr = hfields[0].const_array(mfi);
+        auto const &hz_arr = hfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1185,7 +1169,7 @@ MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
 }
 
 MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1213,8 +1197,8 @@ MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ex_arr = efields[0].const_array(mfi);
-        auto const &hy_arr = bfields[1].const_array(mfi);
-        auto const &hx_arr = bfields[0].const_array(mfi);
+        auto const &hy_arr = hfields[1].const_array(mfi);
+        auto const &hx_arr = hfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1310,7 +1294,7 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
 }
 
 MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1338,8 +1322,8 @@ MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ez_arr = efields[2].const_array(mfi);
-        auto const &hz_arr = bfields[2].const_array(mfi);
-        auto const &hy_arr = bfields[1].const_array(mfi);
+        auto const &hz_arr = hfields[2].const_array(mfi);
+        auto const &hy_arr = hfields[1].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1357,7 +1341,7 @@ MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
 }
 
 MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1385,8 +1369,8 @@ MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ex_arr = efields[0].const_array(mfi);
-        auto const &hx_arr = bfields[0].const_array(mfi);
-        auto const &hz_arr = bfields[2].const_array(mfi);
+        auto const &hx_arr = hfields[0].const_array(mfi);
+        auto const &hz_arr = hfields[2].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1404,7 +1388,7 @@ MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
 }
 
 MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
-                          Array<MultiFab, AMREX_SPACEDIM> const &bfields,
+                          Array<MultiFab, AMREX_SPACEDIM> const &hfields,
                           Real dt) const
 {
     amrex::ignore_unused(dt);
@@ -1432,8 +1416,8 @@ MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
         auto const &p_arr = p_field.const_array(mfi);
         auto const &db_arr = db_field.const_array(mfi);
         auto const &ey_arr = efields[1].const_array(mfi);
-        auto const &hy_arr = bfields[1].const_array(mfi);
-        auto const &hx_arr = bfields[0].const_array(mfi);
+        auto const &hy_arr = hfields[1].const_array(mfi);
+        auto const &hx_arr = hfields[0].const_array(mfi);
 
         ParallelFor(tilebx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
@@ -1528,7 +1512,7 @@ void ADI::solveImplicitEz2(MultiFab &ez, MultiFab const &rhs, Real dt) const
     }
 }
 
-void ADI::stepBx(MultiFab &hx_dst, MultiFab const &ey_src,
+void ADI::stepHx(MultiFab &hx_dst, MultiFab const &ey_src,
                  MultiFab const &ez_src, Real dt)
 {
     amrex::ignore_unused(dt);
@@ -1546,7 +1530,7 @@ void ADI::stepBx(MultiFab &hx_dst, MultiFab const &ey_src,
                                dxinv[1] * (ez[b](i, j + 1, k) - ez[b](i, j, k))); });
 }
 
-void ADI::stepBy(MultiFab &hy_dst, MultiFab const &ez_src,
+void ADI::stepHy(MultiFab &hy_dst, MultiFab const &ez_src,
                  MultiFab const &ex_src, Real dt)
 {
     amrex::ignore_unused(dt);
@@ -1563,7 +1547,7 @@ void ADI::stepBy(MultiFab &hy_dst, MultiFab const &ez_src,
                                dxinv[2] * (ex[b](i, j, k + 1) - ex[b](i, j, k))); });
 }
 
-void ADI::stepBz(MultiFab &hz_dst, MultiFab const &ex_src,
+void ADI::stepHz(MultiFab &hz_dst, MultiFab const &ex_src,
                  MultiFab const &ey_src, Real dt)
 {
     amrex::ignore_unused(dt);

@@ -96,7 +96,7 @@ void FDTD::initData()
 {
     InitSetupFields("fdtd", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
-                    1.0_rt, 1.0_rt, m_geom, m_efields, m_bfields);
+                    1.0_rt, 1.0_rt, m_geom, m_efields, m_bfields, false);
     PecPinTangentialE(m_pec_normal, m_pec_location, m_efields);
 }
 
@@ -139,7 +139,8 @@ void FDTD::evolve()
     {
         UtilWritePlotOutput(m_plot_format, m_output_dir, 0, time,
                             m_conv_plt, m_ic_dir,
-                            m_grids, m_dmap, m_geom, m_efields, m_bfields);
+                            m_grids, m_dmap, m_geom, m_efields, m_bfields,
+                            false);
     }
 
     for (int step = 0; step < m_max_step; ++step)
@@ -206,7 +207,8 @@ void FDTD::evolve()
         {
             UtilWritePlotOutput(m_plot_format, m_output_dir, step + 1, time,
                                 m_conv_plt, m_ic_dir,
-                                m_grids, m_dmap, m_geom, m_efields, m_bfields);
+                                m_grids, m_dmap, m_geom, m_efields, m_bfields,
+                                false);
         }
     }
 }

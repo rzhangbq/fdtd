@@ -1,10 +1,10 @@
-adi.n_cells = 128 128 128  # number of cells
+adi.n_cells = 4 4 256  # number of cells
 adi.max_grid_size = 64     # maximum grid size
 adi.prob_lo = 0.0 0.0 0.0  # lower-left corner of the domain
 adi.prob_hi = 1.0 1.0 1.0  # upper-right corner
 
-adi.max_step = 100
-adi.plot_int = 1           # write output every N steps (0 = off)
+adi.max_step = 1000
+adi.plot_int = 10           # write output every N steps (0 = off)
 adi.plot_format = numpy    # numpy (.bin + .json) or visit (AMReX plotfiles for VisIt)
 adi.output_dir = plt # numpy: directory; visit: plotfile prefix (e.g. plt -> plt00000)
 adi.conv_plt = 0           # numpy only: write a 1D line through the domain center along adi.ic_dir
@@ -19,7 +19,7 @@ adi.pec_location = 0
 
 # Initial condition options:
 #   sinwave        : traveling sinusoidal plane wave
-#   standingwave   : standing wave seeded with E(x) and B=0 at t=0
+#   standingwave   : standing wave seeded with E(x) and H=0 at t=0
 #   gaussianpulse  : Gaussian-modulated plane wave along ic_dir (carrier: ic_wavelength)
 adi.ic = sinwave
 
@@ -30,18 +30,18 @@ adi.ic_pol = 0               # E component: 0=Ex, 1=Ey, 2=Ez (must differ from i
 adi.ic_wavelength = -1       # carrier wavelength along ic_dir (<0 => domain length)
 
 # Gaussian-modulated plane wave (ic = gaussianpulse):
-#   E_pol = E_0 exp(-(xi-x0)^2/(2 sigma^2)) cos(k0*(xi-x0)),  B = (1/c) k_hat x E
+#   E_pol = E_0 exp(-(xi-x0)^2/(2 sigma^2)) cos(k0*(xi-x0)); H amplitude is E_0/Z0*sqrt(eps_r/mu_r).
 #   xi is coordinate along ic_dir; pulse_center is xi_0
 adi.pulse_center = 0.75           # envelope peak xi_0 along ic_dir
 adi.pulse_sigma = 0.05           # envelope sigma; <0 => 0.1 * domain length along ic_dir
 
 # Material properties (relative to vacuum). Default is uniform free space.
-adi.eps_r = 1.0
-adi.mu_r = 1.0
+adi.eps_r = 2.0
+adi.mu_r = 2.0
 adi.sigma = 0.0
 # Optional inhomogeneous block (physical coordinates). Omit both lines for uniform media.
-# adi.material_block_lo = 0.4 0.4 0.4
-# adi.material_block_hi = 0.6 0.6 0.6
-# adi.block_eps_r = 4.0
+# adi.material_block_lo = 0 0 0.2
+# adi.material_block_hi = 1 1 0.3
+# adi.block_eps_r = 1.0
 # adi.block_mu_r = 1.0
-# adi.block_sigma = 0.0
+# adi.block_sigma = 0.5
