@@ -138,21 +138,9 @@ namespace
         }
     }
 
-    // Map packed index (0..nsolve-1) to local offset along solve_dir, skipping PEC at iw.
-    // Order: 0..iw-1, iw+1..nsolve (no nearest-neighbor link across the gap).
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int packedPecGlobalIdx(int p, int iw) noexcept
-    {
-        return (p < iw) ? p : p + 1;
-    }
-
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE int periodicLineGlobalIdx(int p, int iw) noexcept
-    {
-        return (iw < 0) ? p : packedPecGlobalIdx(p, iw);
-    }
-
     // Periodic cyclic tridiagonal solve along solve_dir with inhomogeneous coefficients.
     // interior_pec_iw < 0: full nodal line (hi duplicates lo); optional tangential PEC skip via pec_* / e_comp.
-    // interior_pec_iw >= 0: omit that interior PEC node and break coupling across the gap.
+    // interior_pec_iw >= 0: pin that interior PEC row with A(iw,iw)=1 and RHS(iw)=0.
     void solvePeriodicCyclicLines(MultiFab &field,
                                    MultiFab const &rhs,
                                 MultiFab const &Cb,
@@ -169,7 +157,7 @@ namespace
         int const lo = domain.smallEnd(solve_dir);
         int const hi = domain.bigEnd(solve_dir);
         bool const split_pec = interior_pec_iw >= 0;
-        int const nsolve = split_pec ? hi - lo - 1 : hi - lo;
+        int const nsolve = hi - lo;
         int const iw = split_pec ? interior_pec_iw - lo : -1;
 
         bool const skip_pec_lines =
@@ -243,31 +231,25 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        int const i = lo + g;
+                        int const i = lo + p;
 
-                        Real db_lo = 0.0_rt;
-                        Real db_hi = 0.0_rt;
-                        if (!(split_pec && g == iw))
+                        if (split_pec && p == iw)
                         {
-                            if (g == 0)
-                            {
-                                db_lo = db_arr(hi - 1, j, k);
-                            }
-                            else
-                            {
-                                db_lo = db_arr(i - 1, j, k);
-                            }
-                            db_hi = db_arr(i, j, k);
+                            a[p] = 0.0_rt;
+                            bb[p] = 1.0_rt;
+                            c[p] = 0.0_rt;
+                            continue;
                         }
-                        bool const block_lo = split_pec && g == iw + 1;
-                        bool const block_hi = split_pec && g == iw - 1;
+
+                        Real const db_lo = (p == 0) ? db_arr(hi - 1, j, k)
+                                                    : db_arr(i - 1, j, k);
+                        Real const db_hi = db_arr(i, j, k);
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
+                        a[p] = (p == 0) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -276,8 +258,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        x[p] = field_arr(lo + g, j, k);
+                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(lo + p, j, k);
                     }
 
                     solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
@@ -285,8 +266,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        field_arr(lo + g, j, k) = x[p];
+                        field_arr(lo + p, j, k) = x[p];
                     }
                     if (split_pec)
                     {
@@ -333,31 +313,25 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        int const j = lo + g;
+                        int const j = lo + p;
 
-                        Real db_lo = 0.0_rt;
-                        Real db_hi = 0.0_rt;
-                        if (!(split_pec && g == iw))
+                        if (split_pec && p == iw)
                         {
-                            if (g == 0)
-                            {
-                                db_lo = db_arr(i, hi - 1, k);
-                            }
-                            else
-                            {
-                                db_lo = db_arr(i, j - 1, k);
-                            }
-                            db_hi = db_arr(i, j, k);
+                            a[p] = 0.0_rt;
+                            bb[p] = 1.0_rt;
+                            c[p] = 0.0_rt;
+                            continue;
                         }
-                        bool const block_lo = split_pec && g == iw + 1;
-                        bool const block_hi = split_pec && g == iw - 1;
+
+                        Real const db_lo = (p == 0) ? db_arr(i, hi - 1, k)
+                                                    : db_arr(i, j - 1, k);
+                        Real const db_hi = db_arr(i, j, k);
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
+                        a[p] = (p == 0) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -366,8 +340,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        x[p] = field_arr(i, lo + g, k);
+                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(i, lo + p, k);
                     }
 
                     solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
@@ -375,8 +348,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        field_arr(i, lo + g, k) = x[p];
+                        field_arr(i, lo + p, k) = x[p];
                     }
                     if (split_pec)
                     {
@@ -423,31 +395,25 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        int const kk = lo + g;
+                        int const kk = lo + p;
 
-                        Real db_lo = 0.0_rt;
-                        Real db_hi = 0.0_rt;
-                        if (!(split_pec && g == iw))
+                        if (split_pec && p == iw)
                         {
-                            if (g == 0)
-                            {
-                                db_lo = db_arr(i, j, hi - 1);
-                            }
-                            else
-                            {
-                                db_lo = db_arr(i, j, kk - 1);
-                            }
-                            db_hi = db_arr(i, j, kk);
+                            a[p] = 0.0_rt;
+                            bb[p] = 1.0_rt;
+                            c[p] = 0.0_rt;
+                            continue;
                         }
-                        bool const block_lo = split_pec && g == iw + 1;
-                        bool const block_hi = split_pec && g == iw - 1;
+
+                        Real const db_lo = (p == 0) ? db_arr(i, j, hi - 1)
+                                                    : db_arr(i, j, kk - 1);
+                        Real const db_hi = db_arr(i, j, kk);
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, kk) + al + ga;
-                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
+                        a[p] = (p == 0) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -456,8 +422,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        x[p] = field_arr(i, j, lo + g);
+                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(i, j, lo + p);
                     }
 
                     solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
@@ -465,8 +430,7 @@ namespace
 
                     for (int p = 0; p < nsolve; ++p)
                     {
-                        int const g = periodicLineGlobalIdx(p, iw);
-                        field_arr(i, j, lo + g) = x[p];
+                        field_arr(i, j, lo + p) = x[p];
                     }
                     if (split_pec)
                     {
