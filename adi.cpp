@@ -23,6 +23,13 @@ namespace
         return MultiFab(field.boxArray(), field.DistributionMap(), 1, 0);
     }
 
+    MultiFab makeCoeffLike(MultiFab const &field, MultiFab const &coef)
+    {
+        BoxArray ba(field.boxArray());
+        ba.convert(coef.ixType());
+        return MultiFab(ba, field.DistributionMap(), 1, coef.nGrowVect());
+    }
+
     void definePencilFields(ADI::FieldArray &pencils,
                             ADI::FieldArray const &fields,
                             BoxArray const &base_ba,
@@ -1091,7 +1098,7 @@ MultiFab ADI::buildRhsEx1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:first-e-ex-adi-tridiagonal — implicit along y.
     MultiFab rhs = makeRhsLike(efields[0]);
     MultiFab p_field = makeRhsLike(efields[0]);
-    MultiFab db_field = makeRhsLike(efields[0]);
+    MultiFab db_field = makeCoeffLike(efields[0], m_Db[2]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[0], period);
     copyCoefToLayout(db_field, m_Db[2], period);
@@ -1138,7 +1145,7 @@ MultiFab ADI::buildRhsEy1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:first-e-ey-adi-tridiagonal — implicit along z.
     MultiFab rhs = makeRhsLike(efields[1]);
     MultiFab p_field = makeRhsLike(efields[1]);
-    MultiFab db_field = makeRhsLike(efields[1]);
+    MultiFab db_field = makeCoeffLike(efields[1], m_Db[0]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[1], period);
     copyCoefToLayout(db_field, m_Db[0], period);
@@ -1185,7 +1192,7 @@ MultiFab ADI::buildRhsEz1(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:first-e-ez-adi-tridiagonal — implicit along x.
     MultiFab rhs = makeRhsLike(efields[2]);
     MultiFab p_field = makeRhsLike(efields[2]);
-    MultiFab db_field = makeRhsLike(efields[2]);
+    MultiFab db_field = makeCoeffLike(efields[2], m_Db[1]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[2], period);
     copyCoefToLayout(db_field, m_Db[1], period);
@@ -1228,7 +1235,7 @@ void ADI::solveImplicitEx1(MultiFab &ex, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ex);
-    MultiFab Db = makeRhsLike(ex);
+    MultiFab Db = makeCoeffLike(ex, m_Db[2]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[0], period);
     copyCoefToLayout(Db, m_Db[2], period);
@@ -1254,7 +1261,7 @@ void ADI::solveImplicitEy1(MultiFab &ey, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ey);
-    MultiFab Db = makeRhsLike(ey);
+    MultiFab Db = makeCoeffLike(ey, m_Db[0]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[1], period);
     copyCoefToLayout(Db, m_Db[0], period);
@@ -1280,7 +1287,7 @@ void ADI::solveImplicitEz1(MultiFab &ez, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ez);
-    MultiFab Db = makeRhsLike(ez);
+    MultiFab Db = makeCoeffLike(ez, m_Db[1]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[2], period);
     copyCoefToLayout(Db, m_Db[1], period);
@@ -1310,7 +1317,7 @@ MultiFab ADI::buildRhsEx2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:second-e-ex-adi-tridiagonal — implicit along z.
     MultiFab rhs = makeRhsLike(efields[0]);
     MultiFab p_field = makeRhsLike(efields[0]);
-    MultiFab db_field = makeRhsLike(efields[0]);
+    MultiFab db_field = makeCoeffLike(efields[0], m_Db[1]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[0], period);
     copyCoefToLayout(db_field, m_Db[1], period);
@@ -1357,7 +1364,7 @@ MultiFab ADI::buildRhsEy2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:second-e-ey-adi-tridiagonal — implicit along x.
     MultiFab rhs = makeRhsLike(efields[1]);
     MultiFab p_field = makeRhsLike(efields[1]);
-    MultiFab db_field = makeRhsLike(efields[1]);
+    MultiFab db_field = makeCoeffLike(efields[1], m_Db[2]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[1], period);
     copyCoefToLayout(db_field, m_Db[2], period);
@@ -1404,7 +1411,7 @@ MultiFab ADI::buildRhsEz2(Array<MultiFab, AMREX_SPACEDIM> const &efields,
     // eq:second-e-ez-adi-tridiagonal — implicit along y.
     MultiFab rhs = makeRhsLike(efields[2]);
     MultiFab p_field = makeRhsLike(efields[2]);
-    MultiFab db_field = makeRhsLike(efields[2]);
+    MultiFab db_field = makeCoeffLike(efields[2], m_Db[0]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(p_field, m_p[2], period);
     copyCoefToLayout(db_field, m_Db[0], period);
@@ -1447,7 +1454,7 @@ void ADI::solveImplicitEx2(MultiFab &ex, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ex);
-    MultiFab Db = makeRhsLike(ex);
+    MultiFab Db = makeCoeffLike(ex, m_Db[1]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[0], period);
     copyCoefToLayout(Db, m_Db[1], period);
@@ -1473,7 +1480,7 @@ void ADI::solveImplicitEy2(MultiFab &ey, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ey);
-    MultiFab Db = makeRhsLike(ey);
+    MultiFab Db = makeCoeffLike(ey, m_Db[2]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[1], period);
     copyCoefToLayout(Db, m_Db[2], period);
@@ -1499,7 +1506,7 @@ void ADI::solveImplicitEz2(MultiFab &ez, MultiFab const &rhs, Real dt) const
 {
     amrex::ignore_unused(dt);
     MultiFab Cb = makeRhsLike(ez);
-    MultiFab Db = makeRhsLike(ez);
+    MultiFab Db = makeCoeffLike(ez, m_Db[0]);
     auto const period = m_geom.periodicity();
     copyCoefToLayout(Cb, m_Cb[2], period);
     copyCoefToLayout(Db, m_Db[0], period);
