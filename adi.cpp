@@ -911,7 +911,7 @@ void ADI::initData()
 {
     InitSetupFields("adi", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
-                    m_geom, m_efields, m_bfields);
+                    m_eps_r, m_mu_r, m_geom, m_efields, m_bfields);
     m_magnetic_fields_are_h = false;
     PecPinTangentialE(m_pec_normal, m_pec_location, m_efields);
 }

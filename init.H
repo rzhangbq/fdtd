@@ -16,6 +16,8 @@ void InitSetupFields(
     amrex::Real ic_wavelength,
     amrex::Real pulse_center,
     amrex::Real pulse_sigma,
+    amrex::Real eps_r,
+    amrex::Real mu_r,
     amrex::Geometry const &geom,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &efields,
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> &bfields);

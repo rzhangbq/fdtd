@@ -96,7 +96,7 @@ void FDTD::initData()
 {
     InitSetupFields("fdtd", m_ic, m_ic_amplitude, m_ic_dir,
                     m_ic_pol, m_ic_wavelength, m_pulse_center, m_pulse_sigma,
-                    m_geom, m_efields, m_bfields);
+                    1.0_rt, 1.0_rt, m_geom, m_efields, m_bfields);
     PecPinTangentialE(m_pec_normal, m_pec_location, m_efields);
 }
 

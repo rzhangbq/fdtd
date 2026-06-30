@@ -62,6 +62,8 @@ void InitSetupFields(
     Real ic_wavelength,
     Real pulse_center,
     Real pulse_sigma,
+    Real eps_r,
+    Real mu_r,
     Geometry const &geom,
     Array<MultiFab, AMREX_SPACEDIM> &efields,
     Array<MultiFab, AMREX_SPACEDIM> &bfields)
@@ -91,6 +93,7 @@ void InitSetupFields(
         AMREX_D_DECL(geom.Domain().length(0), geom.Domain().length(1), geom.Domain().length(2))};
 
     Real E0 = ic_amplitude;
+    Real const B0 = E0 * std::sqrt(eps_r * mu_r) / c_light;
     const int dir = ic_dir;
     const int pol = ic_pol;
     const int bdir = 3 - dir - pol;
@@ -111,14 +114,13 @@ void InitSetupFields(
         Real const x0 = pulse_center;
         auto const &ea = efields[pol].arrays();
         auto const &ba = bfields[bdir].arrays();
-        Real B0 = E0 / c_light;
 
         ParallelFor(efields[pol], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
             Real g = gaussian_plane_wave(pol, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
             ea[b](i, j, k) = E0 * g; });
 
-        // B = (1/c) k_hat x E at t=0; sample along ic_dir at B_bdir Yee locations
+        // Sample the matched B field along ic_dir at B_bdir Yee locations.
         ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                     {
             Real g = gaussian_plane_wave(bdir, dir, i, j, k, problo, ncells, dx, x0, sigma, k0);
@@ -139,8 +141,7 @@ void InitSetupFields(
 
         if (is_sinwave)
         {
-            Real B0 = E0 / c_light;
-            // B = (1/c) k_hat x E for a +dir traveling wave at t=0
+            // B = sqrt(mu*eps) k_hat x E for a +dir traveling wave at t=0.
             ParallelFor(bfields[bdir], [=] AMREX_GPU_DEVICE(int b, int i, int j, int k)
                         {
                 Real phase_coord = staggered_coord(bdir, dir, i, j, k, problo, ncells, dx);
