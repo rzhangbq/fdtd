@@ -133,11 +133,11 @@ where $\Delta t$ is the time step, $\varepsilon$ is the permittivity, $\mu$ is t
 \subsection{First Magnetic Half-Step}
 \begin{subequations}\label{eq:fdtd-first-h-half}
     \begin{align}
-        H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^n - \frac{D_{b,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}}}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta z}\right]
+        H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^n - \frac{D_{b,i,j+\frac{1}{2},k+\frac{1}{2}}}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta z}\right]
         \label{eq:fdtd-first-hx}                                                                                                                                                                                                                                                                                                    \\
-        H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^n - \frac{D_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}}}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta x}\right]
+        H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^n - \frac{D_{b,i+\frac{1}{2},j,k+\frac{1}{2}}}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta x}\right]
         \label{eq:fdtd-first-hy}                                                                                                                                                                                                                                                                                                    \\
-        H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^n - \frac{D_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}}}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta y}\right].
+        H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^n - \frac{D_{b,i+\frac{1}{2},j+\frac{1}{2},k}}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta y}\right].
         \label{eq:fdtd-first-hz}
     \end{align}
 \end{subequations}
@@ -175,11 +175,11 @@ In the AMReX Yee grid, with vacuum media, the electric field updates are impleme
 \subsection{Second Magnetic Half-Step}
 \begin{subequations}\label{eq:fdtd-second-h-half}
     \begin{align}
-        H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+1} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_b}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta z}\right]
+        H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+1} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_{b,i,j+\frac{1}{2},k+\frac{1}{2}}}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta z}\right]
         \label{eq:fdtd-second-hx}                                                                                                                                                                                                                                                                       \\
-        H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+1} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_b}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta x}\right]
+        H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+1} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_{b,i+\frac{1}{2},j,k+\frac{1}{2}}}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta x}\right]
         \label{eq:fdtd-second-hy}                                                                                                                                                                                                                                                                       \\
-        H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+1} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} - \frac{D_b}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta y}\right].
+        H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+1} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} - \frac{D_{b,i+\frac{1}{2},j+\frac{1}{2},k}}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta y}\right].
         \label{eq:fdtd-second-hz}
     \end{align}
 \end{subequations}
