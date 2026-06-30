@@ -9,7 +9,6 @@
 #include <AMReX_ParmParse.H>
 
 #include <cmath>
-#include <vector>
 
 using namespace amrex;
 
@@ -138,6 +137,68 @@ namespace
         }
     }
 
+    template <typename Arr>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE Real lineValue(Arr const &arr,
+                                                            int solve_dir,
+                                                            int s,
+                                                            int i,
+                                                            int j,
+                                                            int k) noexcept
+    {
+        if (solve_dir == 0)
+        {
+            return arr(s, j, k);
+        }
+        if (solve_dir == 1)
+        {
+            return arr(i, s, k);
+        }
+        return arr(i, j, s);
+    }
+
+    template <typename Arr>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE void setLineValue(Arr const &arr,
+                                                               int solve_dir,
+                                                               int s,
+                                                               int i,
+                                                               int j,
+                                                               int k,
+                                                               Real value) noexcept
+    {
+        if (solve_dir == 0)
+        {
+            arr(s, j, k) = value;
+        }
+        else if (solve_dir == 1)
+        {
+            arr(i, s, k) = value;
+        }
+        else
+        {
+            arr(i, j, s) = value;
+        }
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE bool pecOnSolveSlab(int pec_normal,
+                                                                 int pec_location,
+                                                                 int pec_lo,
+                                                                 int pec_hi,
+                                                                 int solve_dir,
+                                                                 int i,
+                                                                 int j,
+                                                                 int k) noexcept
+    {
+        if (solve_dir == 0)
+        {
+            return PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, 0, j, k);
+        }
+        if (solve_dir == 1)
+        {
+            return PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, i, 0, k);
+        }
+        return PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, i, j, 0);
+    }
+
     // Periodic cyclic tridiagonal solve along solve_dir with inhomogeneous coefficients.
     // interior_pec_iw < 0: full nodal line (hi duplicates lo); optional tangential PEC skip via pec_* / e_comp.
     // interior_pec_iw >= 0: pin that interior PEC row with A(iw,iw)=1 and RHS(iw)=0.
@@ -192,256 +253,98 @@ namespace
             auto const &cb_arr = Cb.const_array(mfi);
             auto const &db_arr = Db.const_array(mfi);
 
-            if (solve_dir == 0)
-            {
-                Box const b2d = amrex::makeSlab(bx, 0, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const jlo = b2d.smallEnd(1);
-                int const klo = b2d.smallEnd(2);
-                int const jlen = b2d.length(1);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
-                                      {
-                    if (skip_pec_lines &&
-                        PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, 0, j, k))
-                    {
-                        for (int ii = lo; ii <= hi; ++ii)
-                        {
-                            field_arr(ii, j, k) = 0.0_rt;
-                        }
-                        return;
-                    }
-
-                    int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *bb = a + nsolve;
-                    Real *c = bb + nsolve;
-
-                    Real db_seam = db_arr(hi - 1, j, k);
-                    Real alpha_cyclic = -db_seam * inv_d2;
-                    Real beta_cyclic = -db_seam * inv_d2;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const i = lo + p;
-
-                        if (split_pec && p == iw)
-                        {
-                            a[p] = 0.0_rt;
-                            bb[p] = 1.0_rt;
-                            c[p] = 0.0_rt;
-                            continue;
-                        }
-
-                        Real const db_lo = (p == 0) ? db_arr(hi - 1, j, k)
-                                                    : db_arr(i - 1, j, k);
-                        Real const db_hi = db_arr(i, j, k);
-
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
-                    }
-
-                    Real gamma = -bb[0];
-                    bb[0] -= gamma;
-                    bb[nsolve - 1] -= alpha_cyclic * beta_cyclic / gamma;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(lo + p, j, k);
-                    }
-
-                    solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        field_arr(lo + p, j, k) = x[p];
-                    }
-                    if (split_pec)
-                    {
-                        field_arr(interior_pec_iw, j, k) = 0.0_rt;
-                    }
-                    field_arr(hi, j, k) = x[0]; });
-            }
-            else if (solve_dir == 1)
-            {
-                Box const b2d = amrex::makeSlab(bx, 1, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const ilo = b2d.smallEnd(0);
-                int const klo = b2d.smallEnd(2);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
-                                      {
-                    if (skip_pec_lines &&
-                        PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, i, 0, k))
-                    {
-                        for (int jj = lo; jj <= hi; ++jj)
-                        {
-                            field_arr(i, jj, k) = 0.0_rt;
-                        }
-                        return;
-                    }
-
-                    int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *bb = a + nsolve;
-                    Real *c = bb + nsolve;
-
-                    Real db_seam = db_arr(i, hi - 1, k);
-                    Real alpha_cyclic = -db_seam * inv_d2;
-                    Real beta_cyclic = -db_seam * inv_d2;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const j = lo + p;
-
-                        if (split_pec && p == iw)
-                        {
-                            a[p] = 0.0_rt;
-                            bb[p] = 1.0_rt;
-                            c[p] = 0.0_rt;
-                            continue;
-                        }
-
-                        Real const db_lo = (p == 0) ? db_arr(i, hi - 1, k)
-                                                    : db_arr(i, j - 1, k);
-                        Real const db_hi = db_arr(i, j, k);
-
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
-                    }
-
-                    Real gamma = -bb[0];
-                    bb[0] -= gamma;
-                    bb[nsolve - 1] -= alpha_cyclic * beta_cyclic / gamma;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(i, lo + p, k);
-                    }
-
-                    solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        field_arr(i, lo + p, k) = x[p];
-                    }
-                    if (split_pec)
-                    {
-                        field_arr(i, interior_pec_iw, k) = 0.0_rt;
-                    }
-                    field_arr(i, hi, k) = x[0]; });
-            }
-            else if (solve_dir == 2)
-            {
-                Box const b2d = amrex::makeSlab(bx, 2, lo);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const ilo = b2d.smallEnd(0);
-                int const jlo = b2d.smallEnd(1);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                                      {
-                    if (skip_pec_lines &&
-                        PecOnPlane(pec_normal, pec_location, pec_lo, pec_hi, i, j, 0))
-                    {
-                        for (int kk = lo; kk <= hi; ++kk)
-                        {
-                            field_arr(i, j, kk) = 0.0_rt;
-                        }
-                        return;
-                    }
-
-                    int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *z = x + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *bb = a + nsolve;
-                    Real *c = bb + nsolve;
-
-                    Real db_seam = db_arr(i, j, hi - 1);
-                    Real alpha_cyclic = -db_seam * inv_d2;
-                    Real beta_cyclic = -db_seam * inv_d2;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        int const kk = lo + p;
-
-                        if (split_pec && p == iw)
-                        {
-                            a[p] = 0.0_rt;
-                            bb[p] = 1.0_rt;
-                            c[p] = 0.0_rt;
-                            continue;
-                        }
-
-                        Real const db_lo = (p == 0) ? db_arr(i, j, hi - 1)
-                                                    : db_arr(i, j, kk - 1);
-                        Real const db_hi = db_arr(i, j, kk);
-
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        bb[p] = 1.0_rt / cb_arr(i, j, kk) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
-                    }
-
-                    Real gamma = -bb[0];
-                    bb[0] -= gamma;
-                    bb[nsolve - 1] -= alpha_cyclic * beta_cyclic / gamma;
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        x[p] = (split_pec && p == iw) ? 0.0_rt : field_arr(i, j, lo + p);
-                    }
-
-                    solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
-                                           cprime, dprime, z, nsolve);
-
-                    for (int p = 0; p < nsolve; ++p)
-                    {
-                        field_arr(i, j, lo + p) = x[p];
-                    }
-                    if (split_pec)
-                    {
-                        field_arr(i, j, interior_pec_iw) = 0.0_rt;
-                    }
-                    field_arr(i, j, hi) = x[0]; });
-            }
-            else
+            if (solve_dir < 0 || solve_dir > 2)
             {
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
+
+            Box const b2d = amrex::makeSlab(bx, solve_dir, lo);
+            Long const nlines = b2d.numPts();
+            Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
+            Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
+            Real *work = line_work.data();
+            Real *coeff = line_coeff.data();
+            int const xlo = b2d.smallEnd(0);
+            int const ylo = b2d.smallEnd(1);
+            int const zlo = b2d.smallEnd(2);
+            int const xlen = b2d.length(0);
+            int const ylen = b2d.length(1);
+
+            amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+                                  {
+                if (skip_pec_lines &&
+                    pecOnSolveSlab(pec_normal, pec_location, pec_lo, pec_hi,
+                                   solve_dir, i, j, k))
+                {
+                    for (int s = lo; s <= hi; ++s)
+                    {
+                        setLineValue(field_arr, solve_dir, s, i, j, k, 0.0_rt);
+                    }
+                    return;
+                }
+
+                int const line_id =
+                    (i - xlo) + (j - ylo) * xlen + (k - zlo) * xlen * ylen;
+                Real *cprime = work + line_id * nsolve * n_line_work;
+                Real *dprime = cprime + nsolve;
+                Real *x = dprime + nsolve;
+                Real *z = x + nsolve;
+                Real *a = coeff + line_id * nsolve * n_line_coeff;
+                Real *bb = a + nsolve;
+                Real *c = bb + nsolve;
+
+                Real db_seam = lineValue(db_arr, solve_dir, hi - 1, i, j, k);
+                Real alpha_cyclic = -db_seam * inv_d2;
+                Real beta_cyclic = -db_seam * inv_d2;
+
+                for (int p = 0; p < nsolve; ++p)
+                {
+                    int const s = lo + p;
+
+                    if (split_pec && p == iw)
+                    {
+                        a[p] = 0.0_rt;
+                        bb[p] = 1.0_rt;
+                        c[p] = 0.0_rt;
+                        continue;
+                    }
+
+                    Real const db_lo = (p == 0)
+                                           ? lineValue(db_arr, solve_dir, hi - 1, i, j, k)
+                                           : lineValue(db_arr, solve_dir, s - 1, i, j, k);
+                    Real const db_hi = lineValue(db_arr, solve_dir, s, i, j, k);
+
+                    Real const al = db_lo * inv_d2;
+                    Real const ga = db_hi * inv_d2;
+                    bb[p] = 1.0_rt / lineValue(cb_arr, solve_dir, s, i, j, k) + al + ga;
+                    a[p] = (p == 0) ? 0.0_rt : -al;
+                    c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
+                }
+
+                Real gamma = -bb[0];
+                bb[0] -= gamma;
+                bb[nsolve - 1] -= alpha_cyclic * beta_cyclic / gamma;
+
+                for (int p = 0; p < nsolve; ++p)
+                {
+                    int const s = lo + p;
+                    x[p] = (split_pec && p == iw)
+                               ? 0.0_rt
+                               : lineValue(field_arr, solve_dir, s, i, j, k);
+                }
+
+                solveCyclicTridiagonal(a, bb, c, alpha_cyclic, beta_cyclic, gamma, x, x,
+                                       cprime, dprime, z, nsolve);
+
+                for (int p = 0; p < nsolve; ++p)
+                {
+                    setLineValue(field_arr, solve_dir, lo + p, i, j, k, x[p]);
+                }
+                if (split_pec)
+                {
+                    setLineValue(field_arr, solve_dir, interior_pec_iw, i, j, k, 0.0_rt);
+                }
+                setLineValue(field_arr, solve_dir, hi, i, j, k, x[0]); });
         }
     }
 
@@ -476,142 +379,55 @@ namespace
             auto const &cb_arr = Cb.const_array(mfi);
             auto const &db_arr = Db.const_array(mfi);
 
-            if (solve_dir == 0)
-            {
-                Box const b2d = amrex::makeSlab(bx, 0, lo + 1);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const jlo = b2d.smallEnd(1);
-                int const klo = b2d.smallEnd(2);
-                int const jlen = b2d.length(1);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int, int j, int k) noexcept
-                                      {
-                    int const line_id = (j - jlo) + (k - klo) * jlen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *b = a + nsolve;
-                    Real *c = b + nsolve;
-
-                    for (int ii = 0; ii < nsolve; ++ii)
-                    {
-                        int const i = lo + 1 + ii;
-                        Real const db_lo = db_arr(i - 1, j, k);
-                        Real const db_hi = db_arr(i, j, k);
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        b[ii] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[ii] = (ii == 0) ? 0.0_rt : -al;
-                        c[ii] = (ii == nsolve - 1) ? 0.0_rt : -ga;
-                        x[ii] = field_arr(i, j, k);
-                    }
-
-                    solveTridiagonal(a, b, c, x, x, cprime, dprime, nsolve);
-
-                    for (int ii = 0; ii < nsolve; ++ii)
-                    {
-                        field_arr(lo + 1 + ii, j, k) = x[ii];
-                    }
-                    field_arr(lo, j, k) = 0.0_rt;
-                    field_arr(hi, j, k) = 0.0_rt; });
-            }
-            else if (solve_dir == 1)
-            {
-                Box const b2d = amrex::makeSlab(bx, 1, lo + 1);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const ilo = b2d.smallEnd(0);
-                int const klo = b2d.smallEnd(2);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int, int k) noexcept
-                                      {
-                    int const line_id = (i - ilo) + (k - klo) * ilen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *b = a + nsolve;
-                    Real *c = b + nsolve;
-
-                    for (int jj = 0; jj < nsolve; ++jj)
-                    {
-                        int const j = lo + 1 + jj;
-                        Real const db_lo = db_arr(i, j - 1, k);
-                        Real const db_hi = db_arr(i, j, k);
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        b[jj] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[jj] = (jj == 0) ? 0.0_rt : -al;
-                        c[jj] = (jj == nsolve - 1) ? 0.0_rt : -ga;
-                        x[jj] = field_arr(i, j, k);
-                    }
-
-                    solveTridiagonal(a, b, c, x, x, cprime, dprime, nsolve);
-
-                    for (int jj = 0; jj < nsolve; ++jj)
-                    {
-                        field_arr(i, lo + 1 + jj, k) = x[jj];
-                    }
-                    field_arr(i, lo, k) = 0.0_rt;
-                    field_arr(i, hi, k) = 0.0_rt; });
-            }
-            else if (solve_dir == 2)
-            {
-                Box const b2d = amrex::makeSlab(bx, 2, lo + 1);
-                Long const nlines = b2d.numPts();
-                Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
-                Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
-                Real *work = line_work.data();
-                Real *coeff = line_coeff.data();
-                int const ilo = b2d.smallEnd(0);
-                int const jlo = b2d.smallEnd(1);
-                int const ilen = b2d.length(0);
-
-                amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                                      {
-                    int const line_id = (i - ilo) + (j - jlo) * ilen;
-                    Real *cprime = work + line_id * nsolve * n_line_work;
-                    Real *dprime = cprime + nsolve;
-                    Real *x = dprime + nsolve;
-                    Real *a = coeff + line_id * nsolve * n_line_coeff;
-                    Real *b = a + nsolve;
-                    Real *c = b + nsolve;
-
-                    for (int kk = 0; kk < nsolve; ++kk)
-                    {
-                        int const k = lo + 1 + kk;
-                        Real const db_lo = db_arr(i, j, k - 1);
-                        Real const db_hi = db_arr(i, j, k);
-                        Real const al = db_lo * inv_d2;
-                        Real const ga = db_hi * inv_d2;
-                        b[kk] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[kk] = (kk == 0) ? 0.0_rt : -al;
-                        c[kk] = (kk == nsolve - 1) ? 0.0_rt : -ga;
-                        x[kk] = field_arr(i, j, k);
-                    }
-
-                    solveTridiagonal(a, b, c, x, x, cprime, dprime, nsolve);
-
-                    for (int kk = 0; kk < nsolve; ++kk)
-                    {
-                        field_arr(i, j, lo + 1 + kk) = x[kk];
-                    }
-                    field_arr(i, j, lo) = 0.0_rt;
-                    field_arr(i, j, hi) = 0.0_rt; });
-            }
-            else
+            if (solve_dir < 0 || solve_dir > 2)
             {
                 amrex::Abort("solve_dir must be 0, 1, or 2");
             }
+
+            Box const b2d = amrex::makeSlab(bx, solve_dir, lo + 1);
+            Long const nlines = b2d.numPts();
+            Gpu::DeviceVector<Real> line_work(nlines * nsolve * n_line_work);
+            Gpu::DeviceVector<Real> line_coeff(nlines * nsolve * n_line_coeff);
+            Real *work = line_work.data();
+            Real *coeff = line_coeff.data();
+            int const xlo = b2d.smallEnd(0);
+            int const ylo = b2d.smallEnd(1);
+            int const zlo = b2d.smallEnd(2);
+            int const xlen = b2d.length(0);
+            int const ylen = b2d.length(1);
+
+            amrex::ParallelForOMP(b2d, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+                                  {
+                int const line_id =
+                    (i - xlo) + (j - ylo) * xlen + (k - zlo) * xlen * ylen;
+                Real *cprime = work + line_id * nsolve * n_line_work;
+                Real *dprime = cprime + nsolve;
+                Real *x = dprime + nsolve;
+                Real *a = coeff + line_id * nsolve * n_line_coeff;
+                Real *b = a + nsolve;
+                Real *c = b + nsolve;
+
+                for (int p = 0; p < nsolve; ++p)
+                {
+                    int const s = lo + 1 + p;
+                    Real const db_lo = lineValue(db_arr, solve_dir, s - 1, i, j, k);
+                    Real const db_hi = lineValue(db_arr, solve_dir, s, i, j, k);
+                    Real const al = db_lo * inv_d2;
+                    Real const ga = db_hi * inv_d2;
+                    b[p] = 1.0_rt / lineValue(cb_arr, solve_dir, s, i, j, k) + al + ga;
+                    a[p] = (p == 0) ? 0.0_rt : -al;
+                    c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
+                    x[p] = lineValue(field_arr, solve_dir, s, i, j, k);
+                }
+
+                solveTridiagonal(a, b, c, x, x, cprime, dprime, nsolve);
+
+                for (int p = 0; p < nsolve; ++p)
+                {
+                    setLineValue(field_arr, solve_dir, lo + 1 + p, i, j, k, x[p]);
+                }
+                setLineValue(field_arr, solve_dir, lo, i, j, k, 0.0_rt);
+                setLineValue(field_arr, solve_dir, hi, i, j, k, 0.0_rt); });
         }
     }
 
