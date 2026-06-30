@@ -34,3 +34,14 @@ adi.ic_wavelength = -1       # carrier wavelength along ic_dir (<0 => domain len
 #   xi is coordinate along ic_dir; pulse_center is xi_0
 adi.pulse_center = 0.75           # envelope peak xi_0 along ic_dir
 adi.pulse_sigma = 0.05           # envelope sigma; <0 => 0.1 * domain length along ic_dir
+
+# Material properties (relative to vacuum). Default is uniform free space.
+adi.eps_r = 1.0
+adi.mu_r = 1.0
+adi.sigma = 0.0
+# Optional inhomogeneous block (physical coordinates). Omit both lines for uniform media.
+# adi.material_block_lo = 0.4 0.4 0.4
+# adi.material_block_hi = 0.6 0.6 0.6
+# adi.block_eps_r = 4.0
+# adi.block_mu_r = 1.0
+# adi.block_sigma = 0.0

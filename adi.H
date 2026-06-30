@@ -63,8 +63,7 @@ public:
     void solveImplicitEz2(amrex::MultiFab &ez, amrex::MultiFab const &rhs,
                           amrex::Real dt) const;
 
-    // Internal helper updates for B += (dt/2) curl E.
-    // Must be public for NVCC extended device lambda compatibility.
+    // Internal helper updates for H += D_b curl E (magnetic field stored as H).
     void stepBx(amrex::MultiFab &bx, amrex::MultiFab const &ey_src,
                 amrex::MultiFab const &ez_src,
                 amrex::Real dt);
@@ -76,6 +75,27 @@ public:
                 amrex::Real dt);
 
 private:
+    void initMaterials();
+    void updateMaterialCoeffs(amrex::Real dt);
+    void convertBtoH(amrex::Real dt);
+
+    // Yee-staggered ADI half-step coefficients. Physical eps/mu/sigma are
+    // read from inputs and folded into these fields at initialization/update.
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_Cb;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_p;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_Db;
+
+    amrex::Real m_eps_r = 1.0;
+    amrex::Real m_mu_r = 1.0;
+    amrex::Real m_sigma_bg = 0.0;
+    amrex::RealVect m_block_lo{-1.0, -1.0, -1.0};
+    amrex::RealVect m_block_hi{-1.0, -1.0, -1.0};
+    amrex::Real m_block_eps_r = 1.0;
+    amrex::Real m_block_mu_r = 1.0;
+    amrex::Real m_block_sigma = 0.0;
+    bool m_has_material_block = false;
+    bool m_magnetic_fields_are_h = false;
+
     amrex::IntVect m_n_cells;
     int m_max_grid_size = 64;
     amrex::Geometry m_geom;
