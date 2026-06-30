@@ -260,24 +260,14 @@ namespace
                             }
                             db_hi = db_arr(i, j, k);
                         }
-                        if (split_pec && g == iw - 1)
-                        {
-                            db_hi = 0.0_rt;
-                        }
-                        if (split_pec && g == iw)
-                        {
-                            db_lo = 0.0_rt;
-                        }
-                        if (split_pec && g == iw + 1)
-                        {
-                            db_lo = 0.0_rt;
-                        }
+                        bool const block_lo = split_pec && g == iw + 1;
+                        bool const block_hi = split_pec && g == iw - 1;
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
+                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -360,24 +350,14 @@ namespace
                             }
                             db_hi = db_arr(i, j, k);
                         }
-                        if (split_pec && g == iw - 1)
-                        {
-                            db_hi = 0.0_rt;
-                        }
-                        if (split_pec && g == iw)
-                        {
-                            db_lo = 0.0_rt;
-                        }
-                        if (split_pec && g == iw + 1)
-                        {
-                            db_lo = 0.0_rt;
-                        }
+                        bool const block_lo = split_pec && g == iw + 1;
+                        bool const block_hi = split_pec && g == iw - 1;
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, k) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
+                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -460,24 +440,14 @@ namespace
                             }
                             db_hi = db_arr(i, j, kk);
                         }
-                        if (split_pec && g == iw - 1)
-                        {
-                            db_hi = 0.0_rt;
-                        }
-                        if (split_pec && g == iw)
-                        {
-                            db_lo = 0.0_rt;
-                        }
-                        if (split_pec && g == iw + 1)
-                        {
-                            db_lo = 0.0_rt;
-                        }
+                        bool const block_lo = split_pec && g == iw + 1;
+                        bool const block_hi = split_pec && g == iw - 1;
 
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         bb[p] = 1.0_rt / cb_arr(i, j, kk) + al + ga;
-                        a[p] = (p == 0) ? 0.0_rt : -al;
-                        c[p] = (p == nsolve - 1) ? 0.0_rt : -ga;
+                        a[p] = (p == 0 || block_lo) ? 0.0_rt : -al;
+                        c[p] = (p == nsolve - 1 || block_hi) ? 0.0_rt : -ga;
                     }
 
                     Real gamma = -bb[0];
@@ -567,8 +537,8 @@ namespace
                     for (int ii = 0; ii < nsolve; ++ii)
                     {
                         int const i = lo + 1 + ii;
-                        Real const db_lo = (ii == 0) ? 0.0_rt : db_arr(i - 1, j, k);
-                        Real const db_hi = (ii == nsolve - 1) ? 0.0_rt : db_arr(i, j, k);
+                        Real const db_lo = db_arr(i - 1, j, k);
+                        Real const db_hi = db_arr(i, j, k);
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         b[ii] = 1.0_rt / cb_arr(i, j, k) + al + ga;
@@ -611,8 +581,8 @@ namespace
                     for (int jj = 0; jj < nsolve; ++jj)
                     {
                         int const j = lo + 1 + jj;
-                        Real const db_lo = (jj == 0) ? 0.0_rt : db_arr(i, j - 1, k);
-                        Real const db_hi = (jj == nsolve - 1) ? 0.0_rt : db_arr(i, j, k);
+                        Real const db_lo = db_arr(i, j - 1, k);
+                        Real const db_hi = db_arr(i, j, k);
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         b[jj] = 1.0_rt / cb_arr(i, j, k) + al + ga;
@@ -655,8 +625,8 @@ namespace
                     for (int kk = 0; kk < nsolve; ++kk)
                     {
                         int const k = lo + 1 + kk;
-                        Real const db_lo = (kk == 0) ? 0.0_rt : db_arr(i, j, k - 1);
-                        Real const db_hi = (kk == nsolve - 1) ? 0.0_rt : db_arr(i, j, k);
+                        Real const db_lo = db_arr(i, j, k - 1);
+                        Real const db_hi = db_arr(i, j, k);
                         Real const al = db_lo * inv_d2;
                         Real const ga = db_hi * inv_d2;
                         b[kk] = 1.0_rt / cb_arr(i, j, k) + al + ga;
