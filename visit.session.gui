@@ -28,32 +28,49 @@
         </Object>
         <Field name="postWhenShown" type="bool">false</Field>
         <Object name="File open">
-            <Field name="x" type="int">151</Field>
-            <Field name="y" type="int">610</Field>
+            <Field name="x" type="int">270</Field>
+            <Field name="y" type="int">354</Field>
             <Field name="width" type="int">649</Field>
             <Field name="height" type="int">500</Field>
             <Field name="visible" type="bool">false</Field>
         </Object>
+        <Object name="Subset">
+            <Field name="x" type="int">0</Field>
+            <Field name="y" type="int">25</Field>
+            <Field name="width" type="int">640</Field>
+            <Field name="height" type="int">1182</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+        </Object>
+        <Object name="View">
+            <Field name="x" type="int">0</Field>
+            <Field name="y" type="int">25</Field>
+            <Field name="width" type="int">640</Field>
+            <Field name="height" type="int">687</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+            <Field name="activeTab" type="int">2</Field>
+        </Object>
         <Object name="MainWin">
             <Field name="x" type="int">0</Field>
             <Field name="y" type="int">5</Field>
-            <Field name="width" type="int">502</Field>
-            <Field name="height" type="int">1220</Field>
-            <Field name="SPLITTER_VALUES_V2" type="floatVector">0 0.5411215 0.4523365 </Field>
+            <Field name="width" type="int">640</Field>
+            <Field name="height" type="int">1202</Field>
+            <Field name="SPLITTER_VALUES_V2" type="floatVector">0 0.5408745 0.4524715 </Field>
         </Object>
         <Object name="Pseudocolor plot attributes">
             <Field name="x" type="int">0</Field>
             <Field name="y" type="int">25</Field>
-            <Field name="width" type="int">502</Field>
-            <Field name="height" type="int">1200</Field>
+            <Field name="width" type="int">640</Field>
+            <Field name="height" type="int">687</Field>
             <Field name="visible" type="bool">false</Field>
             <Field name="posted" type="bool">false</Field>
         </Object>
         <Object name="ThreeSlice operator attributes">
             <Field name="x" type="int">0</Field>
             <Field name="y" type="int">25</Field>
-            <Field name="width" type="int">502</Field>
-            <Field name="height" type="int">1200</Field>
+            <Field name="width" type="int">640</Field>
+            <Field name="height" type="int">687</Field>
             <Field name="visible" type="bool">false</Field>
             <Field name="posted" type="bool">false</Field>
         </Object>
