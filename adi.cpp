@@ -203,16 +203,16 @@ namespace
     // interior_pec_iw < 0: full nodal line (hi duplicates lo); optional tangential PEC skip via pec_* / e_comp.
     // interior_pec_iw >= 0: pin that interior PEC row with A(iw,iw)=1 and RHS(iw)=0.
     void solvePeriodicCyclicLines(MultiFab &field,
-                                   MultiFab const &rhs,
-                                MultiFab const &Cb,
-                                MultiFab const &Db,
-                                int solve_dir,
-                                Real inv_d2,
-                                int interior_pec_iw,
-                                int pec_normal,
-                                int pec_location,
-                                int e_comp,
-                                std::string const &solver_name)
+                                  MultiFab const &rhs,
+                                  MultiFab const &Cb,
+                                  MultiFab const &Db,
+                                  int solve_dir,
+                                  Real inv_d2,
+                                  int interior_pec_iw,
+                                  int pec_normal,
+                                  int pec_location,
+                                  int e_comp,
+                                  std::string const &solver_name)
     {
         Box const domain = field.boxArray().minimalBox();
         int const lo = domain.smallEnd(solve_dir);
@@ -242,7 +242,7 @@ namespace
 
         field.ParallelCopy(rhs, 0, 0, 1);
 
-        constexpr int n_line_work = 4; // cprime, dprime, x, z
+        constexpr int n_line_work = 4;  // cprime, dprime, x, z
         constexpr int n_line_coeff = 3; // a, bb, c per row
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
@@ -368,7 +368,7 @@ namespace
 
         field.ParallelCopy(rhs, 0, 0, 1);
 
-        constexpr int n_line_work = 3; // cprime, dprime, x
+        constexpr int n_line_work = 3;  // cprime, dprime, x
         constexpr int n_line_coeff = 3; // a, b, c per row
 
         for (MFIter mfi(field); mfi.isValid(); ++mfi)
@@ -639,7 +639,6 @@ void ADI::updateMaterialCoeffs(Real dt)
     amrex::FillBoundary(p_ptrs, period);
     amrex::FillBoundary(db_ptrs, period);
 }
-
 
 void ADI::initData()
 {
