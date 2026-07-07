@@ -1,10 +1,10 @@
-adi.n_cells = 128 128 128  # number of cells
+adi.n_cells = 4 4 128  # number of cells
 adi.max_grid_size = 64     # maximum grid size
 adi.prob_lo = 0.0 0.0 0.0  # lower-left corner of the domain
 adi.prob_hi = 1.0 1.0 1.0  # upper-right corner
 
 adi.max_step = 100
-adi.plot_int = 1           # write output every N steps (0 = off)
+adi.plot_int = 5           # write output every N steps (0 = off)
 adi.plot_format = numpy    # numpy (.bin + .json) or visit (AMReX plotfiles for VisIt)
 adi.output_dir = plt # numpy: directory; visit: plotfile prefix (e.g. plt -> plt00000)
 adi.conv_plt = 0           # numpy only: write a 1D line through the domain center along adi.ic_dir
