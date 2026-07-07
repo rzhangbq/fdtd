@@ -1022,6 +1022,24 @@ The PML recursion coefficients are,
         a_{z} & = \frac{\sigma_{z}} {\kappa_{z}\left(\sigma_{z}+\kappa_{z}\alpha_{z}\right)} \left(b_{z}-1\right).
     \end{align}
 \end{subequations}
+Here $\sigma_s$, $\alpha_s$, and $\kappa_s$ are evaluated at the same location as the corresponding auxiliary variable and in the same derivative direction $s$. For a PML layer normal to direction $s$, let $\rho_s$ be the distance from the inner PML interface into the PML, $L_s=N_{\mathrm{pml}}\Delta s$ be the PML thickness, and $m$ be the polynomial grading order. Then, for $0\le \rho_s\le L_s$,
+\begin{align}
+    \sigma_s(\rho_s) & = \sigma_{s,\max}\left(\frac{\rho_s}{L_s}\right)^m, \\
+    \kappa_s(\rho_s) & = 1+\left(\kappa_{s,\max}-1\right)\left(\frac{\rho_s}{L_s}\right)^m, \\
+    \alpha_s(\rho_s) & = \alpha_{s,\max}\left(1-\frac{\rho_s}{L_s}\right),
+\end{align}
+while outside the PML,
+\begin{equation}
+    \sigma_s=0, \qquad \alpha_s=0, \qquad \kappa_s=1.
+\end{equation}
+The maximum conductivity may be chosen from a target reflection coefficient $R$ as
+\begin{equation}
+    \sigma_{s,\max}
+    =
+    -\frac{(m+1)\ln R}{2\eta_0 L_s},
+    \qquad
+    \eta_0=\sqrt{\frac{\mu_0}{\varepsilon_0}}.
+\end{equation}
 
 The magnetic auxiliary variables are updated from the electric fields at the time levels used by the first-half ADI magnetic updates,
 \begin{subequations}\label{eq:first-pml-aux-h}
