@@ -73,16 +73,56 @@ public:
     void stepHz(amrex::MultiFab &hz, amrex::MultiFab const &ex_src,
                 amrex::MultiFab const &ey_src,
                 amrex::Real dt);
+    void stepHxPml1(amrex::MultiFab &hx, amrex::MultiFab const &ey_half,
+                    amrex::MultiFab const &ez_n, amrex::Real dt);
+    void stepHyPml1(amrex::MultiFab &hy, amrex::MultiFab const &ez_half,
+                    amrex::MultiFab const &ex_n, amrex::Real dt);
+    void stepHzPml1(amrex::MultiFab &hz, amrex::MultiFab const &ex_half,
+                    amrex::MultiFab const &ey_n, amrex::Real dt);
+    void stepHxPml2(amrex::MultiFab &hx, amrex::MultiFab const &ey_half,
+                    amrex::MultiFab const &ez_np1, amrex::Real dt);
+    void stepHyPml2(amrex::MultiFab &hy, amrex::MultiFab const &ez_half,
+                    amrex::MultiFab const &ex_np1, amrex::Real dt);
+    void stepHzPml2(amrex::MultiFab &hz, amrex::MultiFab const &ex_half,
+                    amrex::MultiFab const &ey_np1, amrex::Real dt);
 
 private:
     void initMaterials();
     void updateMaterialCoeffs(amrex::Real dt);
+    void initPmlProfiles();
+    void updatePmlRecursionCoeffs(amrex::Real dt);
+    void updatePmlAuxElectricFirstHalf(FieldArray const &hfields_n);
+    void updatePmlAuxMagneticFirstHalf(FieldArray const &efields_half,
+                                       FieldArray const &efields_n);
+    void updatePmlAuxElectricSecondHalf(FieldArray const &hfields_half);
+    void updatePmlAuxMagneticSecondHalf(FieldArray const &efields_np1,
+                                        FieldArray const &efields_half);
 
     // Yee-staggered ADI half-step coefficients. Physical eps/mu/sigma are
     // read from inputs and folded into these fields at initialization/update.
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_Cb;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_p;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_Db;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_kappa;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_a_pml;
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_b_pml;
+    enum PsiIndex
+    {
+        PSI_EXY = 0,
+        PSI_EXZ,
+        PSI_EYX,
+        PSI_EYZ,
+        PSI_EZX,
+        PSI_EZY,
+        PSI_HXY,
+        PSI_HXZ,
+        PSI_HYX,
+        PSI_HYZ,
+        PSI_HZX,
+        PSI_HZY
+    };
+    amrex::Array<amrex::MultiFab, 6> m_psi_e;
+    amrex::Array<amrex::MultiFab, 6> m_psi_h;
 
     amrex::Real m_eps_r = 1.0;
     amrex::Real m_mu_r = 1.0;
@@ -121,6 +161,13 @@ private:
     int m_pec_normal = -1;
     // 0 = PEC on domain faces normal to pec_normal; else interior PEC at this index.
     int m_pec_location = 0;
+    bool m_pml_on = false;
+    int m_pml_normal = -1;
+    int m_pml_thickness = 10;
+    amrex::Real m_pml_sigma_max = 0.0;
+    amrex::Real m_pml_grade_m = 3.0;
+    amrex::Real m_pml_alpha_max = 0.0;
+    amrex::Real m_pml_kappa_max = 1.0;
 
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_efields;
     amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> m_hfields;
