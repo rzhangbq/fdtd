@@ -19,7 +19,7 @@ adi.pec_location = 0
 
 # Convolutional PML (CPML)
 # pml_normal: -1 disables PML, otherwise 0=x, 1=y, 2=z
-adi.pml_normal = 2
+adi.pml_normal = -1
 adi.pml_thickness = 10
 adi.pml_sigma_max = 1.0
 adi.pml_grade_m = 3.0
