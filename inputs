@@ -19,7 +19,7 @@ adi.pec_location = 0
 
 # Convolutional PML (CPML)
 # pml_normal: -1 disables PML, otherwise 0=x, 1=y, 2=z
-adi.pml_normal = -1
+adi.pml_normal = 2
 adi.pml_thickness = 10
 adi.pml_sigma_max = 1.0
 adi.pml_grade_m = 3.0
@@ -42,7 +42,7 @@ adi.ic_wavelength = -1       # carrier wavelength along ic_dir (<0 => domain len
 #   E_pol = E_0 exp(-(xi-x0)^2/(2 sigma^2)) cos(k0*(xi-x0)),  B = (1/c) k_hat x E
 #   xi is coordinate along ic_dir; pulse_center is xi_0
 adi.pulse_center = 0.75           # envelope peak xi_0 along ic_dir
-adi.pulse_sigma = 0.05           # envelope sigma; <0 => 0.1 * domain length along ic_dir
+adi.pulse_sigma = 0.1           # envelope sigma; <0 => 0.1 * domain length along ic_dir
 
 # Material properties (relative to vacuum). Default is uniform free space.
 adi.eps_r = 1.0
