@@ -3,8 +3,8 @@ adi.max_grid_size = 64     # maximum grid size
 adi.prob_lo = 0.0 0.0 0.0  # lower-left corner of the domain
 adi.prob_hi = 1.0 1.0 1.0  # upper-right corner
 
-adi.max_step = 100
-adi.plot_int = 5           # write output every N steps (0 = off)
+adi.max_step = 200
+adi.plot_int = 1           # write output every N steps (0 = off)
 adi.plot_format = numpy    # numpy (.bin + .json) or visit (AMReX plotfiles for VisIt)
 adi.output_dir = plt # numpy: directory; visit: plotfile prefix (e.g. plt -> plt00000)
 adi.conv_plt = 0           # numpy only: write a 1D line through the domain center along adi.ic_dir
@@ -21,16 +21,16 @@ adi.pec_location = 0
 # pml_normal: -1 disables PML, otherwise 0=x, 1=y, 2=z
 adi.pml_normal = -1
 adi.pml_thickness = 10
-adi.pml_sigma_max = 0.0
+adi.pml_sigma_max = 1.0
 adi.pml_grade_m = 3.0
 adi.pml_alpha_max = 0.0
-adi.pml_kappa_max = 1.0
+adi.pml_kappa_max = 5.0
 
 # Initial condition options:
 #   sinwave        : traveling sinusoidal plane wave
 #   standingwave   : standing wave seeded with E(x) and B=0 at t=0
 #   gaussianpulse  : Gaussian-modulated plane wave along ic_dir (carrier: ic_wavelength)
-adi.ic = sinwave
+adi.ic = gaussianpulse
 
 # Shared by sinwave, standingwave, and gaussianpulse:
 adi.ic_amplitude = 0.01    # E_0
@@ -49,8 +49,8 @@ adi.eps_r = 1.0
 adi.mu_r = 1.0
 adi.sigma = 0.0
 # Optional inhomogeneous block (physical coordinates). Omit both lines for uniform media.
-# adi.material_block_lo = 0.4 0.4 0.4
-# adi.material_block_hi = 0.6 0.6 0.6
+# adi.material_block_lo = 0 0 0.2
+# adi.material_block_hi = 1 1 0.4
 # adi.block_eps_r = 4.0
 # adi.block_mu_r = 1.0
 # adi.block_sigma = 0.0
