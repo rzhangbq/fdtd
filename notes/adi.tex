@@ -853,4 +853,254 @@ then
 \end{equation}
 is already satisfied for all $n$.
 
+\section{External Excitation}
+
+External field excitations are prescribed by user-defined grid functions of space and time, together with a spatial flag that selects the excitation type at each Yee edge (or face). Following the Artemis convention,
+\begin{itemize}
+    \item flag $=0$: no excitation,
+    \item flag $=1$: hard source (Dirichlet), field equals the prescribed value,
+    \item flag $=2$: soft source, the prescribed value is \emph{added} to the field update.
+\end{itemize}
+In the macroscopic ADI push these two families are treated differently: soft electric sources are built into the implicit electric systems, while magnetic sources are applied after each magnetic half-step. Hard electric sources are not supported in the ADI electric solve.
+
+\subsection{Soft Electric Sources in the ADI Electric Update}
+
+Write $S_{E_x,i+\tfrac12,j,k}^{n+\frac14}$ for the soft-source value assigned to the $E_x$ edge at $\bigl(i+\tfrac12,j,k\bigr)$ and time level $n+\tfrac14$ (and likewise for $E_y$ and $E_z$ at their staggered locations). Over a full step the intended soft contribution at that edge is split equally between the two ADI half-steps and evaluated at the quarter-step levels $n+\tfrac14$ and $n+\tfrac34$. The first-half electric update \eqref{eq:first-e-ex-adi} is then modified to
+\begin{equation}\label{eq:adi-ex-soft-unnormalized}
+    E_{x,i+\tfrac12,j,k}^{n+\frac12}
+    = C_{a,i+\tfrac12,j,k}\,E_{x,i+\tfrac12,j,k}^{n}
+    + C_{b,i+\tfrac12,j,k}\,[H_1]
+    + \frac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac14},
+\end{equation}
+on edges where the $E_x$ flag equals $2$, and is unchanged elsewhere. The second half-step \eqref{eq:second-e-ex-adi} is analogous,
+\begin{equation}
+    E_{x,i+\tfrac12,j,k}^{n+1}
+    = C_{a,i+\tfrac12,j,k}\,E_{x,i+\tfrac12,j,k}^{n+\frac12}
+    + C_{b,i+\tfrac12,j,k}\,[H_4]
+    + \frac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac34}.
+\end{equation}
+The same construction applies componentwise to $E_y$ and $E_z$. The magnetic updates themselves are unchanged by the electric source; only the electric right-hand side is affected.
+
+\subsection{Effect on the ADI Tridiagonal System}
+
+Dividing \eqref{eq:adi-ex-soft-unnormalized} by $C_{b,i+\tfrac12,j,k}$ and substituting the magnetic update as in Section~3 yields the same left-hand side as \eqref{eq:first-e-ex-adi-tridiagonal}. On soft-source edges the only modification is an additional known term on the right-hand side:
+\begin{align}
+    \begin{split}
+        -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
+        + \beta_{x1}E_{x,i+\tfrac12,j,k}^{n+\frac12}
+        - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
+         & = p_{x1}E_{x,i+\tfrac12,j,k}^{n}                                                                       \\
+         & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
+         & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
+         & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
+         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
+         & \quad +\frac{1}{2C_{b,i+\tfrac12,j,k}}\,S_{E_x,i+\tfrac12,j,k}^{n+\frac14},
+    \end{split}
+    \label{eq:first-e-ex-adi-tridiagonal-excitation}
+\end{align}
+with the same coefficients $\alpha_{x1},\beta_{x1},\gamma_{x1},p_{x1},q_{x1},r_{x1}$ as in Section~3. Away from soft-source edges the final term is omitted. In the implementation this contribution is the increment
+\begin{equation}
+    \texttt{rhs}_{i,j,k} \mathrel{+}= \tfrac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac14}/C_{b,i+\tfrac12,j,k}
+\end{equation}
+added after the curl terms have been assembled. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way, and the second half-step is analogous with $S_{E_x,i+\tfrac12,j,k}^{n+\frac34}/(2C_{b,i+\tfrac12,j,k})$ on the normalized right-hand side.
+
+Consequently a hard electric source (flag $=1$), which would require constraining the unknown $E$ itself rather than adding to the right-hand side, is rejected in the ADI electric path.
+
+\subsection{Magnetic Sources After Each Half-Step}
+
+After the first ADI half-step has produced $\mathbf{E}^{n+\frac12}$ and $\mathbf{B}^{n+\frac12}$, and again after the second half-step has produced $\mathbf{E}^{n+1}$ and $\mathbf{B}^{n+1}$, an external magnetic excitation is applied directly to the magnetic field. Write $S_{B_x,i,j+\tfrac12,k+\tfrac12}^{n}$ for the value assigned to the $B_x$ face at $\bigl(i,j+\tfrac12,k+\tfrac12\bigr)$ and time level $n$. With the half-step flag set, a soft magnetic source (flag $=2$) contributes
+\begin{equation}
+    B_{x,i,j+\tfrac12,k+\tfrac12}
+    \;\leftarrow\;
+    B_{x,i,j+\tfrac12,k+\tfrac12}
+    + \tfrac12\,S_{B_x,i,j+\tfrac12,k+\tfrac12}^{n},
+\end{equation}
+while a hard magnetic source (flag $=1$) overwrites
+\begin{equation}
+    B_{x,i,j+\tfrac12,k+\tfrac12}
+    \;\leftarrow\;
+    S_{B_x,i,j+\tfrac12,k+\tfrac12}^{n}.
+\end{equation}
+(The factor $\tfrac12$ again splits a full-step soft increment across the two half-steps.) The same rules apply to $B_y$ and $B_z$ at their staggered faces. Unlike the electric soft source, this magnetic update is an explicit post-processing of the field after the ADI magnetic stage; it does not enter the tridiagonal electric systems.
+
+\subsection{Summary of the ADI Excitation Path}
+
+Over one full step $\Delta t$, the macroscopic ADI scheme therefore proceeds as follows.
+\begin{enumerate}
+    \item Form and solve the first-half electric systems with soft electric sources $S_E^{n+\frac14}$ added as $\tfrac12 S_E^{n+\frac14}$ (equivalently $\tfrac12 S_E^{n+\frac14}/C_b$ on the normalized RHS).
+    \item Update $\mathbf{B}$ to $n+\tfrac12$ from the ADI magnetic formulae.
+    \item Apply magnetic excitation to $\mathbf{B}^{n+\frac12}$ (soft: add $\tfrac12 S_B^{n}$; hard: set equal to $S_B^{n}$).
+    \item Form and solve the second-half electric systems with soft electric sources $S_E^{n+\frac34}$.
+    \item Update $\mathbf{B}$ to $n+1$, then apply magnetic excitation to $\mathbf{B}^{n+1}$.
+\end{enumerate}
+Hard electric sources are not part of this path. Soft electric sources never overwrite $E$; they only augment the Amp\`ere right-hand side of each half-step, consistently with the half-step coefficients $C_a$ and $C_b$ of \eqref{eq:adi-half-coefficients}.
+
+\section{Lumped Inductance}
+
+A lumped inductor is introduced as an additional current density $\mathbf{J}_\mathrm{L}$ in Amp\`ere's law,
+\begin{subequations}\label{eq:maxwell-inductor}
+    \begin{align}
+        \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{L}
+        \label{eq:maxwell-ampere-inductor} \\
+        \nabla \times \mathbf{E} & = -\mu \frac{\partial \mathbf{H}}{\partial t}.
+        \label{eq:maxwell-faraday-inductor}
+    \end{align}
+\end{subequations}
+On each Yee edge that hosts an inductor, the constitutive relation $V=L\,dI/dt$ for an ideal lumped inductor is written in field form. For an $x$-directed edge of length $\Delta x$ and cross-sectional area $\Delta y\,\Delta z$, with lumped inductance $L_x$ assigned to that edge (total inductance, not inductance per unit length),
+\begin{equation}
+    V = E_x\Delta x,
+    \qquad
+    I = J_{\mathrm{L},x}\,\Delta y\,\Delta z,
+\end{equation}
+so
+\begin{equation}\label{eq:inductor-constitutive}
+    E_x\Delta x
+    = L_x\,\Delta y\,\Delta z\,\frac{\partial J_{\mathrm{L},x}}{\partial t},
+\end{equation}
+or equivalently
+\begin{equation}\label{eq:inductor-kappa}
+    \frac{\partial J_{\mathrm{L},x}}{\partial t}
+    = \kappa_x E_x,
+    \qquad
+    \kappa_x = \frac{\Delta x}{\Delta y\,\Delta z\,L_x}.
+\end{equation}
+The $y$ and $z$ components are analogous, with
+\begin{equation}
+    \kappa_y = \frac{\Delta y}{\Delta x\,\Delta z\,L_y},
+    \qquad
+    \kappa_z = \frac{\Delta z}{\Delta x\,\Delta y\,L_z}.
+\end{equation}
+Away from inductor edges one sets $\kappa=0$ (equivalently $L\to\infty$), so $\mathbf{J}_\mathrm{L}$ is unchanged there and need not be stored or evolved; outside the inductor region, $\mathbf{J}_\mathrm{L}$ should normally be initialized to zero. The Maxwell--Faraday equation \eqref{eq:maxwell-faraday-inductor} is unmodified, and therefore the magnetic ADI updates of Section~3 are unchanged. Only the electric update and the inductor ODE are coupled.
+
+For FDTD/ADI with lumped $R$, $L$, and $C$, one may treat the element explicitly, semi-implicitly, or fully implicitly.
+An \emph{explicit} update of $J_\mathrm{L}$ from a known $E$ (as in the leapfrog macroscopic FDTD inductor) reintroduces a stability restriction set by the local $LC$ scale $\omega_L\sim\sqrt{\kappa/\varepsilon}$, which becomes severe at the large CFLs that motivate ADI.
+For the isolated lossless field--inductor subsystem, the centered trapezoidal discretization below has amplification factors of unit modulus for every $\Delta t$ and therefore introduces no lumped-inductor stability restriction; when incorporated consistently into an energy-stable ADI discretization, it preserves the unconditional stability property of the underlying ADI method.
+A fully one-sided implicit inductor update can also remove the inductor timestep restriction, but introduces numerical dissipation that can be interpreted as an artificial resistive loss.
+We therefore adopt the centered trapezoidal coupling.
+
+\subsection{Centered Trapezoidal Inductor Coupling}
+
+Over a half step of size $\Delta t/2$, discretize \eqref{eq:inductor-kappa} by the trapezoidal rule,
+\begin{equation}\label{eq:inductor-trapezoidal}
+    \frac{J_{\mathrm{L},x}^{n+\frac12}-J_{\mathrm{L},x}^{n}}{\Delta t/2}
+    = \kappa_x\,\frac{E_x^{n+\frac12}+E_x^{n}}{2},
+\end{equation}
+which rearranges to
+\begin{equation}\label{eq:inductor-j-semi}
+    J_{\mathrm{L},x}^{n+\frac12}
+    = J_{\mathrm{L},x}^{n}
+    + \frac{\Delta t}{4}\,\kappa_x\bigl(E_x^{n+\frac12}+E_x^{n}\bigr).
+\end{equation}
+For a centered, nondissipative coupling, Amp\`ere's law must contain the averaged current $(J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n})/2$, not the fully advanced value $J_{\mathrm{L},x}^{n+\frac12}$ alone. Using the same centered conductivity average as in Section~3,
+\begin{equation}
+    \varepsilon\frac{E_x^{n+\frac12}-E_x^{n}}{\Delta t/2}
+    + \sigma\frac{E_x^{n+\frac12}+E_x^{n}}{2}
+    + \frac{J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n}}{2}
+    = [H_1],
+    \label{eq:first-e-ex-inductor-semi}
+\end{equation}
+where $[H_1]$ is unchanged from Section~3. From \eqref{eq:inductor-j-semi},
+\begin{equation}
+    \frac{J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n}}{2}
+    = J_{\mathrm{L},x}^{n}
+    + \frac{\Delta t}{8}\,\kappa_x\bigl(E_x^{n+\frac12}+E_x^{n}\bigr).
+\end{equation}
+Substituting into \eqref{eq:first-e-ex-inductor-semi} and collecting unknowns gives
+\begin{equation}
+    \left(\frac{2\varepsilon}{\Delta t}+\frac{\sigma}{2}+\frac{\Delta t}{8}\kappa_x\right)E_x^{n+\frac12}
+    = \left(\frac{2\varepsilon}{\Delta t}-\frac{\sigma}{2}-\frac{\Delta t}{8}\kappa_x\right)E_x^{n}
+    + [H_1]
+    - J_{\mathrm{L},x}^{n}.
+\end{equation}
+Define the inductor-modified half-step coefficients
+\begin{equation}\label{eq:adi-half-coefficients-inductor}
+    C_a^{L}
+    = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}-\dfrac{\Delta t}{8}\kappa}
+    {\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa},
+    \qquad
+    C_b^{L}
+    = \frac{1}
+    {\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa}.
+\end{equation}
+When $\kappa=0$ these reduce to \eqref{eq:adi-half-coefficients}. The electric update is then
+\begin{equation}
+    E_{x,i+\tfrac12,j,k}^{n+\frac12}
+    = C_{a,i+\tfrac12,j,k}^{L}\,E_{x,i+\tfrac12,j,k}^{n}
+    + C_{b,i+\tfrac12,j,k}^{L}\Bigl([H_1]-J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}\Bigr).
+    \label{eq:first-e-ex-adi-inductor-semi}
+\end{equation}
+Thus, the inductance modifies the local diagonal electric coefficient through $\kappa$ in $C_a^{L}$ and $C_b^{L}$, while the previously known current $J_{\mathrm{L}}^{n}$ appears as a known right-hand-side term. After $E_x^{n+\frac12}$ is obtained, $J_{\mathrm{L},x}$ is updated by \eqref{eq:inductor-j-semi}.
+
+On an inductor edge, where $\kappa>0$, and with $\sigma=0$ and no curl contribution, define the local electromagnetic--inductor energy by
+\begin{equation}
+    \mathcal{E}
+    = \frac{\varepsilon}{2}E^2
+    + \frac{1}{2\kappa}J_{\mathrm{L}}^2.
+\end{equation}
+This energy is exactly conserved by the centered pair
+\begin{equation}
+    \varepsilon\frac{E^{n+\frac12}-E^{n}}{\Delta t/2}
+    + \frac{J_{\mathrm{L}}^{n+\frac12}+J_{\mathrm{L}}^{n}}{2}
+    = 0,
+    \qquad
+    \frac{J_{\mathrm{L}}^{n+\frac12}-J_{\mathrm{L}}^{n}}{\Delta t/2}
+    = \kappa\frac{E^{n+\frac12}+E^{n}}{2},
+\end{equation}
+so $\mathcal{E}^{n+\frac12}-\mathcal{E}^{n}=0$.
+By contrast, replacing the averaged current in Amp\`ere by the fully advanced value $J_{\mathrm{L}}^{n+\frac12}$ yields
+\begin{equation}
+    \mathcal{E}^{n+\frac12}-\mathcal{E}^{n}
+    = -\frac{1}{2\kappa}\bigl(J_{\mathrm{L}}^{n+\frac12}-J_{\mathrm{L}}^{n}\bigr)^2
+    \le 0,
+\end{equation}
+and is therefore numerically dissipative even though the inductor ODE itself is integrated by the trapezoidal rule.
+
+\subsection{Effect on the ADI Tridiagonal System}
+
+The magnetic update for $H_z^{n+\frac12}$ is identical to Section~3. Substituting it into \eqref{eq:first-e-ex-adi-inductor-semi} yields the same stencil structure as \eqref{eq:first-e-ex-adi-tridiagonal}, but with $C_a\to C_a^{L}$ and $C_b\to C_b^{L}$:
+\begin{align}
+    \begin{split}
+        -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
+        + \beta_{x1}^{L}E_{x,i+\tfrac12,j,k}^{n+\frac12}
+        - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
+         & = p_{x1}^{L}E_{x,i+\tfrac12,j,k}^{n}                                                                   \\
+         & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
+         & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
+         & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
+         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
+         & \quad - J_{\mathrm{L},x,i+\tfrac12,j,k}^{n},
+    \end{split}
+    \label{eq:first-e-ex-adi-tridiagonal-inductor}
+\end{align}
+where
+\begin{align}
+    \alpha_{x1} & =\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},         \\
+    \gamma_{x1} & =\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},         \\
+    \beta_{x1}^{L}
+                & =\frac{1}{C_{b,i+\tfrac12,j,k}^{L}}+\alpha_{x1}+\gamma_{x1}, \\
+    p_{x1}^{L}
+                & =\frac{C_{a,i+\tfrac12,j,k}^{L}}{C_{b,i+\tfrac12,j,k}^{L}},  \\
+    q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                            \\
+    r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
+\end{align}
+The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_b^{L}$ and $C_a^{L}$. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way. The second half-step is analogous: the current update is
+\begin{equation}
+    J_{\mathrm{L},x}^{n+1}
+    = J_{\mathrm{L},x}^{n+\frac12}
+    + \frac{\Delta t}{4}\,\kappa_x\bigl(E_x^{n+1}+E_x^{n+\frac12}\bigr),
+\end{equation}
+while the corresponding Amp\`ere stage uses the centered current $(J_{\mathrm{L},x}^{n+1}+J_{\mathrm{L},x}^{n+\frac12})/2$, which after elimination produces the same $\Delta t\,\kappa/8$ modification of the electric coefficients and the known right-hand-side term $-J_{\mathrm{L},x}^{n+\frac12}$.
+
+\subsection{Stability Remarks}
+
+Eliminating $J_\mathrm{L}$ locally produces an oscillator of frequency $\omega_L=\sqrt{\kappa/\varepsilon}$. For the isolated lossless field--inductor subsystem, the centered trapezoidal discretization has amplification factors of unit modulus for every $\Delta t$ and therefore introduces no lumped-inductor stability restriction.
+Unit-modulus amplification of the local oscillator alone is not, by itself, a complete proof of unconditional stability of the full spatial ADI splitting; that property follows only when the inductor coupling is embedded consistently in an energy-stable ADI discretization.
+By contrast, replacing \eqref{eq:inductor-j-semi} by the explicit rule
+$J_{\mathrm{L}}^{n+\frac12}=J_{\mathrm{L}}^{n}+(\Delta t/2)\kappa E^{n}$
+and inserting that known current only as a right-hand-side source leaves $\omega_L\Delta t$ constrained, defeating the purpose of ADI at large CFL.
+
+\subsection{Remark on the Present Implementation}
+
+In the current Artemis macroscopic ADI push, soft electric sources are added to the ADI right-hand side, but the lumped-inductor current $\mathbf{J}_\mathrm{L}$ is not. The inductor object still advances $\mathbf{J}_\mathrm{L}$ explicitly when enabled, yet that current is unused by \texttt{MacroscopicEvolveADI}. The modification needed for a stable ADI inductor is therefore: (i)~replace $C_a,C_b$ by $C_a^{L},C_b^{L}$ on inductor edges; (ii)~add $-C_b^{L}J_{\mathrm{L}}^{\mathrm{old}}$ to the field-update form, or equivalently add $-J_{\mathrm{L}}^{\mathrm{old}}$ to the normalized tridiagonal right-hand side; and (iii)~update $J_{\mathrm{L}}$ with the trapezoidal rule \eqref{eq:inductor-j-semi} after each electric solve.
+
 \end{document}
