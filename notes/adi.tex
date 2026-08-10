@@ -134,9 +134,9 @@ where $\Delta t$ is the time step, $\varepsilon$ is the permittivity, $\mu$ is t
 \begin{subequations}\label{eq:fdtd-first-h-half}
     \begin{align}
         H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^n - \frac{D_{b,i,j+\frac{1}{2},k+\frac{1}{2}}}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta z}\right]
-        \label{eq:fdtd-first-hx}                                                                                                                                                                                                                                                                                                    \\
+        \label{eq:fdtd-first-hx}                                                                                                                                                                                                                                                                                    \\
         H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^n - \frac{D_{b,i+\frac{1}{2},j,k+\frac{1}{2}}}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^n-E_{z,i,j,k+\frac{1}{2}}^n}{\Delta x}\right]
-        \label{eq:fdtd-first-hy}                                                                                                                                                                                                                                                                                                    \\
+        \label{eq:fdtd-first-hy}                                                                                                                                                                                                                                                                                    \\
         H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^n - \frac{D_{b,i+\frac{1}{2},j+\frac{1}{2},k}}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^n-E_{y,i,j+\frac{1}{2},k}^n}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^n-E_{x,i+\frac{1}{2},j,k}^n}{\Delta y}\right].
         \label{eq:fdtd-first-hz}
     \end{align}
@@ -176,9 +176,9 @@ In the AMReX Yee grid, with vacuum media, the electric field updates are impleme
 \begin{subequations}\label{eq:fdtd-second-h-half}
     \begin{align}
         H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+1} & = H_{x,i,j+\frac{1}{2},k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_{b,i,j+\frac{1}{2},k+\frac{1}{2}}}{2} \left[\frac{E_{z,i,j+1,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta y} - \frac{E_{y,i,j+\frac{1}{2},k+1}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta z}\right]
-        \label{eq:fdtd-second-hx}                                                                                                                                                                                                                                                                       \\
+        \label{eq:fdtd-second-hx}                                                                                                                                                                                                                                                                                                       \\
         H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+1} & = H_{y,i+\frac{1}{2},j,k+\frac{1}{2}}^{n+\frac{1}{2}} - \frac{D_{b,i+\frac{1}{2},j,k+\frac{1}{2}}}{2} \left[\frac{E_{x,i+\frac{1}{2},j,k+1}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta z} - \frac{E_{z,i+1,j,k+\frac{1}{2}}^{n+1}-E_{z,i,j,k+\frac{1}{2}}^{n+1}}{\Delta x}\right]
-        \label{eq:fdtd-second-hy}                                                                                                                                                                                                                                                                       \\
+        \label{eq:fdtd-second-hy}                                                                                                                                                                                                                                                                                                       \\
         H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+1} & = H_{z,i+\frac{1}{2},j+\frac{1}{2},k}^{n+\frac{1}{2}} - \frac{D_{b,i+\frac{1}{2},j+\frac{1}{2},k}}{2} \left[\frac{E_{y,i+1,j+\frac{1}{2},k}^{n+1}-E_{y,i,j+\frac{1}{2},k}^{n+1}}{\Delta x} - \frac{E_{x,i+\frac{1}{2},j+1,k}^{n+1}-E_{x,i+\frac{1}{2},j,k}^{n+1}}{\Delta y}\right].
         \label{eq:fdtd-second-hz}
     \end{align}
@@ -753,6 +753,182 @@ In the AMReX Yee grid, with vacuum media, the field updates are implemented as
     \end{align}
 \end{subequations}
 
+\section{Dispersion Analysis}
+
+We analyze the homogeneous-vacuum ADI scheme for a wave propagating in the $x$-direction with
+\begin{equation}
+    E_x=E_y=0,\qquad H_x=H_z=0,
+\end{equation}
+so that the only nontrivial fields are $E_z$ and $H_y$. The other axis-aligned polarizations follow by a cyclic permutation of coordinates.
+
+For simplicity, we consider the case of vacuum media. Set $\sigma=0$, $\varepsilon=\varepsilon_0$, $\mu=\mu_0$, and
+\begin{equation}
+    c=\frac{1}{\sqrt{\varepsilon_0\mu_0}}.
+\end{equation}
+The half-step coefficients \eqref{eq:adi-half-coefficients} are then
+\begin{equation}
+    C_a=1,\qquad
+    C_b=\frac{\Delta t}{2\varepsilon_0},\qquad
+    D_b=\frac{\Delta t}{2\mu_0}.
+    \label{eq:adi-dispersion-vacuum-coefficients}
+\end{equation}
+Define the coefficient $\gamma$ by
+\begin{equation}
+    \gamma:=C_bD_b=\frac{(c\Delta t)^2}{4}.
+\end{equation}
+
+Define the two staggered first-difference operators by
+\begin{align}
+    \left(\delta_x^{E}E_z\right)_{i+\tfrac12,j,k+\tfrac12}
+     & :=\frac{E_{z,i+1,j,k+\tfrac12}-E_{z,i,j,k+\tfrac12}}{\Delta x},
+    \label{eq:adi-delta-x-E}                                                           \\
+    \left(\delta_x^{H}H_y\right)_{i,j,k+\tfrac12}
+     & :=\frac{H_{y,i+\tfrac12,j,k+\tfrac12}-H_{y,i-\tfrac12,j,k+\tfrac12}}{\Delta x}.
+    \label{eq:adi-delta-x-H}
+\end{align}
+Thus $\delta_x^{E}$ maps the $E_z$ grid to the $H_y$ grid, while $\delta_x^{H}$ maps the $H_y$ grid to the $E_z$ grid. Their composition is the centered second difference
+\begin{equation}
+    \left(\delta_x^2E_z\right)_{i,j,k+\tfrac12}
+    :=\left(\delta_x^{H}\delta_x^{E}E_z\right)_{i,j,k+\tfrac12}
+    =\frac{E_{z,i-1,j,k+\tfrac12}-2E_{z,i,j,k+\tfrac12}
+    +E_{z,i+1,j,k+\tfrac12}}{\Delta x^2}.
+    \label{eq:adi-delta-x-squared}
+\end{equation}
+
+\subsection{One-dimensional ADI update}
+
+Restricting \eqref{eq:first-e-ez-adi-tridiagonal}--\eqref{eq:adi-first-hy} to this polarization and multiplying the electric equation by $C_b$, the first half-step is
+\begin{equation}
+    \left(1-\gamma\delta_x^2\right)E_z^{n+\frac12}
+    =E_z^n+C_b\delta_x^{H}H_y^n,
+    \label{eq:first-e-ez-adi-tridiagonal-dispersion}
+\end{equation}
+\begin{equation}
+    H_y^{n+\frac12}=H_y^n+D_b\delta_x^{E}E_z^{n+\frac12},
+    \label{eq:adi-first-hy-dispersion}
+\end{equation}
+where $E_z$ is implicit along $x$. In the second half-step, $E_z$ is formally implicit along $y$. Because this mode has no $y$-dependence, that second-difference term vanishes and the update reduces to
+\begin{equation}
+    E_z^{n+1}=E_z^{n+\frac12}+C_b\delta_x^{H}H_y^{n+\frac12},
+    \label{eq:second-e-ez-adi-tridiagonal-dispersion}
+\end{equation}
+\begin{equation}
+    H_y^{n+1}=H_y^{n+\frac12}+D_b\delta_x^{E}E_z^{n+\frac12}.
+    \label{eq:adi-second-hy-dispersion}
+\end{equation}
+Both magnetic half-updates use the same intermediate electric field; therefore,
+\begin{equation}
+    H_y^{n+1}=H_y^n+2D_b\delta_x^{E}E_z^{n+\frac12}
+    \label{eq:adi-dispersion-full-hy}
+\end{equation}
+
+\subsection{Plane-wave ansatz and Yee symbols}
+
+At any time level $m$, write a spatial Fourier mode on the staggered Yee grid as
+\begin{align}
+    E_{z,i,j,k+\tfrac12}^{m} & =\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x}, \\
+    H_{y,i+\tfrac12,j,k+\tfrac12}^{m} & =\widehat H_y^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}.
+    \label{eq:adi-dispersion-spatial-mode}
+\end{align}
+Plugging into \eqref{eq:adi-delta-x-E} gives
+\begin{align}
+    \left(\delta_x^{E}E_z^m\right)_{i+\tfrac12,j,k+\tfrac12} & =\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
+     & =\mathrm{i}K_x\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x},
+\end{align}
+where
+\begin{equation}
+    K_x:=\frac{2}{\Delta x}\sin\!\left(\frac{k_x\Delta x}{2}\right).
+    \label{eq:adi-Kx}
+\end{equation}
+Similarly, \eqref{eq:adi-delta-x-H} gives
+\begin{align}
+    \left(\delta_x^{H}H_y^m\right)_{i,j,k+\tfrac12} & =\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
+     & =\mathrm{i}K_x\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}.
+\end{align}
+Consequently, the Fourier symbols of the explicitly defined operators are
+\begin{equation}
+    \delta_x^{E}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^{H}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^2\longleftrightarrow-K_x^2.
+    \label{eq:adi-difference-symbols}
+\end{equation}
+As $\Delta x\to0$, $K_x\to k_x$, so these symbols recover their continuum counterparts.
+
+\subsection{Fourier reduction of the half-steps}
+
+For brevity, define the derivative symbol and implicit denominator
+\begin{equation}
+    s:=\mathrm{i}K_x,\qquad D:=1+\gamma K_x^2.
+    \label{eq:adi-dispersion-s-D}
+\end{equation}
+Substituting into \eqref{eq:first-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the first-half electric update becomes
+\begin{equation}
+    D\widehat E_z^{\,n+\frac12} = \widehat E_z^{\,n}+C_bs\widehat H_y^{\,n}.
+    \label{eq:adi-dispersion-half1-E}
+\end{equation}
+Similarly for \eqref{eq:adi-first-hy-dispersion}, we have
+\begin{equation}
+    \widehat H_y^{\,n+\frac12} = \widehat H_y^{\,n}+D_bs\widehat E_z^{\,n+\frac12}.
+    \label{eq:adi-dispersion-half1-H}
+\end{equation}
+Substituting into \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the second-half electric update becomes
+\begin{equation}
+    \widehat E_z^{\,n+1} = \widehat E_z^{\,n+\frac12}+C_bs\widehat H_y^{\,n+\frac12},
+    \label{eq:adi-dispersion-half2-E}
+\end{equation}
+Similarly for \eqref{eq:adi-second-hy-dispersion}, we have
+\begin{equation}
+    \widehat H_y^{\,n+1} = \widehat H_y^{\,n}+2D_bs\widehat E_z^{\,n+\frac12}
+    \label{eq:adi-dispersion-full-H}
+\end{equation}
+
+\subsection{Amplification matrix}
+
+Solving \eqref{eq:adi-dispersion-half1-E} for the intermediate electric amplitude gives
+\begin{equation}
+    \widehat E_z^{\,n+\frac12}=\frac{1}{D}\widehat E_z^{\,n}+\frac{C_bs}{D}\widehat H_y^{\,n}.
+\end{equation}
+Substitution into \eqref{eq:adi-dispersion-half2-E} and \eqref{eq:adi-dispersion-full-H}, using $C_bD_b=\gamma$ and $s^2=-K_x^2$, gives the one-step map
+\begin{equation}
+    \begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n+1}=G\begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n},\qquad G=\frac{1}{D}\begin{pmatrix} 1-\gamma K_x^2 & 2C_b s \\ 2D_b s & 1-\gamma K_x^2 \end{pmatrix}.
+    \label{eq:adi-amplification-matrix}
+\end{equation}
+
+\subsection{Numerical dispersion relation}
+
+A time-harmonic mode satisfies
+\begin{equation}
+    \begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}^{n+1}=\lambda\begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}^{n},\qquad \lambda=e^{-\mathrm{i}\omega\Delta t}.
+\end{equation}
+The characteristic equation $\det(G-\lambda I)=0$ yields
+\begin{equation}
+    \lambda = \frac{1-\gamma K_x^2\pm 2\mathrm{i}\,K_x\sqrt{\gamma}}{1+\gamma K_x^2}.
+\end{equation}
+Introduce the CFL number $S:=c\Delta t/\Delta x$ and
+\begin{equation}
+    \nu := S\sin\!\left(\frac{k_x\Delta x}{2}\right) = K_x\sqrt{\gamma}.
+\end{equation}
+Then $\gamma K_x^2=\nu^2$, and the eigenvalues simplify to
+\begin{equation}
+    \lambda = \frac{1\pm\mathrm{i}\nu}{1\mp\mathrm{i}\nu}.
+\end{equation}
+The forward-propagating branch ($\omega>0$) is
+\begin{equation}
+    \lambda = \frac{1-\mathrm{i}\nu}{1+\mathrm{i}\nu},
+\end{equation}
+for which $\lvert\lambda\rvert=1$ (unconditional stability of this one-dimensional reduction) and
+\begin{equation}
+    \arg(\lambda)=-2\arctan(\nu).
+\end{equation}
+Therefore the ADI numerical dispersion relation is
+\begin{equation}
+    \boxed{\omega_{\mathrm{ADI}}(k_x) = \frac{2}{\Delta t}\,\arctan\!\left(S\sin\frac{k_x\Delta x}{2}\right).}
+    \label{eq:adi-dispersion-relation}
+\end{equation}
+In the continuum limit $k_x\Delta x\to 0$ with fixed $S$, one has $\sin(k_x\Delta x/2)\approx k_x\Delta x/2$ and $\arctan\nu\approx\nu$, hence
+\begin{equation}
+    \omega_{\mathrm{ADI}} \approx \frac{2}{\Delta t}\cdot S\cdot\frac{k_x\Delta x}{2} = ck_x,
+\end{equation}
+as required. The leading truncation error is $O((k_x\Delta x)^2)$ at fixed Courant number, so the phase-velocity error decreases quadratically with cells-per-wavelength.
+
 \section{Solution of Linear Systems}
 
 See \href{https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm}{Tridiagonal matrix algorithm} for more details.
@@ -941,7 +1117,7 @@ A lumped inductor is introduced as an additional current density $\mathbf{J}_\ma
 \begin{subequations}\label{eq:maxwell-inductor}
     \begin{align}
         \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{L}
-        \label{eq:maxwell-ampere-inductor} \\
+        \label{eq:maxwell-ampere-inductor}                                                                                          \\
         \nabla \times \mathbf{E} & = -\mu \frac{\partial \mathbf{H}}{\partial t}.
         \label{eq:maxwell-faraday-inductor}
     \end{align}
@@ -996,7 +1172,7 @@ For a centered, nondissipative coupling, Amp\`ere's law must contain the average
     \varepsilon\frac{E_x^{n+\frac12}-E_x^{n}}{\Delta t/2}
     + \sigma\frac{E_x^{n+\frac12}+E_x^{n}}{2}
     + \frac{J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n}}{2}
-    = [H_1],
+        = [H_1],
     \label{eq:first-e-ex-inductor-semi}
 \end{equation}
 where $[H_1]$ is unchanged from Section~3. From \eqref{eq:inductor-j-semi},
@@ -1074,13 +1250,13 @@ The magnetic update for $H_z^{n+\frac12}$ is identical to Section~3. Substitutin
 \end{align}
 where
 \begin{align}
-    \alpha_{x1} & =\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},         \\
-    \gamma_{x1} & =\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},         \\
+    \alpha_{x1} & =\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},           \\
+    \gamma_{x1} & =\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},           \\
     \beta_{x1}^{L}
                 & =\frac{1}{C_{b,i+\tfrac12,j,k}^{L}}+\alpha_{x1}+\gamma_{x1}, \\
     p_{x1}^{L}
                 & =\frac{C_{a,i+\tfrac12,j,k}^{L}}{C_{b,i+\tfrac12,j,k}^{L}},  \\
-    q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                            \\
+    q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                              \\
     r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
 \end{align}
 The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_b^{L}$ and $C_a^{L}$. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way. The second half-step is analogous: the current update is
