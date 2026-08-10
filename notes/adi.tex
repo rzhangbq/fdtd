@@ -753,6 +753,107 @@ In the AMReX Yee grid, with vacuum media, the field updates are implemented as
     \end{align}
 \end{subequations}
 
+
+\section{Solution of Linear Systems}
+
+See \href{https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm}{Tridiagonal matrix algorithm} for more details.
+
+\section{Perfect Electric Conductor Boundary Conditions}
+
+For a perfect electric conductor (PEC) boundary with outward unit normal $\hat{\mathbf{n}}$, the electric field satisfies
+\begin{equation}
+    \hat{\mathbf{n}} \times \mathbf{E} = 0.
+\end{equation}
+That is, the tangential electric field vanishes on the conducting surface. If the field inside the conductor is not evolved and the initial data are consistent with the boundary, then Faraday's law also implies that the normal magnetic flux remains zero on the wall,
+\begin{equation}
+    \hat{\mathbf{n}} \cdot \mathbf{B} = 0.
+\end{equation}
+
+Now consider a rectangular domain with PEC boundaries on the two faces normal to $x$, namely the planes $x=x_{\mathrm{lo}}$ and $x=x_{\mathrm{hi}}$, while the four faces normal to $y$ and $z$ remain periodic. On the AMReX Yee grid, $E_y$ and $E_z$ are nodal in $x$ and therefore live directly on the $x$-boundary planes, whereas $E_x$ is centered at $i+\tfrac12$ in the $x$ direction and is not stored on the boundary itself. If the domain has $N_x$ cells in $x$, the discrete PEC conditions are therefore
+\begin{equation}\label{eq:pec-x-walls}
+    E_y(0,j,k) = E_y(N_x,j,k) = 0, \qquad E_z(0,j,k) = E_z(N_x,j,k) = 0.
+\end{equation}
+No value is imposed directly on $E_x$ at the wall, since it is the normal component.
+
+In the Yee update, the implementation is to overwrite the tangential electric fields on the two PEC planes after each electric-field stage,
+\begin{equation}
+    E_y^m(0,j,k) = E_y^m(N_x,j,k) = 0, \qquad E_z^m(0,j,k) = E_z^m(N_x,j,k) = 0,
+\end{equation}
+where $m=n+\frac12$ or $n+1$ depending on the stage. The neighboring magnetic updates then use differences against these zero boundary values. For example, the $x$-derivative appearing in the $B_y$ update is approximated by
+\begin{equation}
+    \left.\frac{\partial E_z}{\partial x}\right|_{i+\frac12,j,k} \approx \frac{E_z(i+1,j,k)-E_z(i,j,k)}{\Delta x}.
+\end{equation}
+At the first interior face next to $x=x_{\mathrm{lo}}$,
+\begin{equation}
+    \left.\frac{\partial E_z}{\partial x}\right|_{\frac12,j,k} \approx \frac{E_z(1,j,k)-E_z(0,j,k)}{\Delta x} = \frac{E_z(1,j,k)}{\Delta x},
+\end{equation}
+while at the last interior face next to $x=x_{\mathrm{hi}}$,
+\begin{equation}
+    \left.\frac{\partial E_z}{\partial x}\right|_{N_x-\frac12,j,k} \approx \frac{E_z(N_x,j,k)-E_z(N_x-1,j,k)}{\Delta x} = -\frac{E_z(N_x-1,j,k)}{\Delta x}.
+\end{equation}
+Likewise, the update for the normal magnetic component $B_x$ on the PEC planes involves only tangential derivatives of $E_y$ and $E_z$, so if $B_x$ is initialized consistently on the wall then it remains zero there.
+
+In the ADI scheme, the same PEC condition enters as a Dirichlet condition whenever a tangential electric component is solved implicitly along $x$. Because the $y$ and $z$ directions remain periodic, the implicit solves along those directions are unchanged and stay cyclic. The only modified line solves are the $x$-directed ones:
+\begin{itemize}
+    \item the $E_z$ solve in the first half-step, equation \eqref{eq:first-e-ez-adi-tridiagonal};
+    \item the $E_y$ solve in the second half-step, equation \eqref{eq:second-e-ey-adi-tridiagonal}.
+\end{itemize}
+
+For the first half-step, the $E_z$ solve uses
+\begin{equation}
+    E_{z,0,j,k+\tfrac12}^{n+\frac12} = 0, \qquad E_{z,N_x,j,k+\tfrac12}^{n+\frac12} = 0.
+\end{equation}
+Hence the first and last interior tridiagonal equations are
+\begin{equation}
+    \beta_{z1} E_{z,1,j,k+\tfrac12}^{n+\frac12} - \gamma_{z1} E_{z,2,j,k+\tfrac12}^{n+\frac12} = \mathrm{RHS},
+\end{equation}
+and
+\begin{equation}
+    -\alpha_{z1} E_{z,N_x-2,j,k+\tfrac12}^{n+\frac12} + \beta_{z1} E_{z,N_x-1,j,k+\tfrac12}^{n+\frac12} = \mathrm{RHS},
+\end{equation}
+respectively. The boundary unknowns do not participate in the solve; they are prescribed by the PEC condition.
+
+Similarly, in the second half-step the $E_y$ solve uses
+\begin{equation}
+    E_{y,0,j+\tfrac12,k}^{n+1} = 0, \qquad E_{y,N_x,j+\tfrac12,k}^{n+1} = 0.
+\end{equation}
+Hence the first and last interior tridiagonal equations are
+\begin{equation}
+    \beta_{y2} E_{y,1,j+\tfrac12,k}^{n+1} - \gamma_{y2} E_{y,2,j+\tfrac12,k}^{n+1} = \mathrm{RHS},
+\end{equation}
+and
+\begin{equation}
+    -\alpha_{y2} E_{y,N_x-2,j+\tfrac12,k}^{n+1} + \beta_{y2} E_{y,N_x-1,j+\tfrac12,k}^{n+1} = \mathrm{RHS},
+\end{equation}
+respectively.
+
+Note that we do not need to explicitly impose $\hat{\mathbf{n}} \cdot \mathbf{B} = 0$ separately. For an $x$-normal wall, the magnetic update on the boundary plane $i=i_b$, with $i_b \in \{0,N_x\}$, is
+\begin{equation}
+    B_x^{n+1}(i_b,j,k)
+    = B_x^n(i_b,j,k)
+    + \frac{\Delta t}{2}\left[
+        \frac{E_y^{n+\frac12}(i_b,j,k+1)-E_y^{n+\frac12}(i_b,j,k)}{\Delta z}
+        - \frac{E_z^{n+1}(i_b,j+1,k)-E_z^{n+1}(i_b,j,k)}{\Delta y}
+    \right].
+\end{equation}
+Since the PEC condition gives
+\begin{equation}
+    E_y(i_b,j,k) = 0, \qquad E_z(i_b,j,k) = 0
+\end{equation}
+for all $j$ and $k$, it follows that
+\begin{equation}
+    B_x^{n+1}(i_b,j,k) = B_x^n(i_b,j,k).
+\end{equation}
+Therefore, if
+\begin{equation}
+    B_x^0(i_b,j,k) = 0,
+\end{equation}
+then
+\begin{equation}
+    B_x^n(i_b,j,k) = 0
+\end{equation}
+is already satisfied for all $n$.
+
 \section{Dispersion Analysis}
 
 We analyze the homogeneous-vacuum ADI scheme for a wave propagating in the $x$-direction with
@@ -928,106 +1029,6 @@ In the continuum limit $k_x\Delta x\to 0$ with fixed $S$, one has $\sin(k_x\Delt
     \omega_{\mathrm{ADI}} \approx \frac{2}{\Delta t}\cdot S\cdot\frac{k_x\Delta x}{2} = ck_x,
 \end{equation}
 as required. The leading truncation error is $O((k_x\Delta x)^2)$ at fixed Courant number, so the phase-velocity error decreases quadratically with cells-per-wavelength.
-
-\section{Solution of Linear Systems}
-
-See \href{https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm}{Tridiagonal matrix algorithm} for more details.
-
-\section{Perfect Electric Conductor Boundary Conditions}
-
-For a perfect electric conductor (PEC) boundary with outward unit normal $\hat{\mathbf{n}}$, the electric field satisfies
-\begin{equation}
-    \hat{\mathbf{n}} \times \mathbf{E} = 0.
-\end{equation}
-That is, the tangential electric field vanishes on the conducting surface. If the field inside the conductor is not evolved and the initial data are consistent with the boundary, then Faraday's law also implies that the normal magnetic flux remains zero on the wall,
-\begin{equation}
-    \hat{\mathbf{n}} \cdot \mathbf{B} = 0.
-\end{equation}
-
-Now consider a rectangular domain with PEC boundaries on the two faces normal to $x$, namely the planes $x=x_{\mathrm{lo}}$ and $x=x_{\mathrm{hi}}$, while the four faces normal to $y$ and $z$ remain periodic. On the AMReX Yee grid, $E_y$ and $E_z$ are nodal in $x$ and therefore live directly on the $x$-boundary planes, whereas $E_x$ is centered at $i+\tfrac12$ in the $x$ direction and is not stored on the boundary itself. If the domain has $N_x$ cells in $x$, the discrete PEC conditions are therefore
-\begin{equation}\label{eq:pec-x-walls}
-    E_y(0,j,k) = E_y(N_x,j,k) = 0, \qquad E_z(0,j,k) = E_z(N_x,j,k) = 0.
-\end{equation}
-No value is imposed directly on $E_x$ at the wall, since it is the normal component.
-
-In the Yee update, the implementation is to overwrite the tangential electric fields on the two PEC planes after each electric-field stage,
-\begin{equation}
-    E_y^m(0,j,k) = E_y^m(N_x,j,k) = 0, \qquad E_z^m(0,j,k) = E_z^m(N_x,j,k) = 0,
-\end{equation}
-where $m=n+\frac12$ or $n+1$ depending on the stage. The neighboring magnetic updates then use differences against these zero boundary values. For example, the $x$-derivative appearing in the $B_y$ update is approximated by
-\begin{equation}
-    \left.\frac{\partial E_z}{\partial x}\right|_{i+\frac12,j,k} \approx \frac{E_z(i+1,j,k)-E_z(i,j,k)}{\Delta x}.
-\end{equation}
-At the first interior face next to $x=x_{\mathrm{lo}}$,
-\begin{equation}
-    \left.\frac{\partial E_z}{\partial x}\right|_{\frac12,j,k} \approx \frac{E_z(1,j,k)-E_z(0,j,k)}{\Delta x} = \frac{E_z(1,j,k)}{\Delta x},
-\end{equation}
-while at the last interior face next to $x=x_{\mathrm{hi}}$,
-\begin{equation}
-    \left.\frac{\partial E_z}{\partial x}\right|_{N_x-\frac12,j,k} \approx \frac{E_z(N_x,j,k)-E_z(N_x-1,j,k)}{\Delta x} = -\frac{E_z(N_x-1,j,k)}{\Delta x}.
-\end{equation}
-Likewise, the update for the normal magnetic component $B_x$ on the PEC planes involves only tangential derivatives of $E_y$ and $E_z$, so if $B_x$ is initialized consistently on the wall then it remains zero there.
-
-In the ADI scheme, the same PEC condition enters as a Dirichlet condition whenever a tangential electric component is solved implicitly along $x$. Because the $y$ and $z$ directions remain periodic, the implicit solves along those directions are unchanged and stay cyclic. The only modified line solves are the $x$-directed ones:
-\begin{itemize}
-    \item the $E_z$ solve in the first half-step, equation \eqref{eq:first-e-ez-adi-tridiagonal};
-    \item the $E_y$ solve in the second half-step, equation \eqref{eq:second-e-ey-adi-tridiagonal}.
-\end{itemize}
-
-For the first half-step, the $E_z$ solve uses
-\begin{equation}
-    E_{z,0,j,k+\tfrac12}^{n+\frac12} = 0, \qquad E_{z,N_x,j,k+\tfrac12}^{n+\frac12} = 0.
-\end{equation}
-Hence the first and last interior tridiagonal equations are
-\begin{equation}
-    \beta_{z1} E_{z,1,j,k+\tfrac12}^{n+\frac12} - \gamma_{z1} E_{z,2,j,k+\tfrac12}^{n+\frac12} = \mathrm{RHS},
-\end{equation}
-and
-\begin{equation}
-    -\alpha_{z1} E_{z,N_x-2,j,k+\tfrac12}^{n+\frac12} + \beta_{z1} E_{z,N_x-1,j,k+\tfrac12}^{n+\frac12} = \mathrm{RHS},
-\end{equation}
-respectively. The boundary unknowns do not participate in the solve; they are prescribed by the PEC condition.
-
-Similarly, in the second half-step the $E_y$ solve uses
-\begin{equation}
-    E_{y,0,j+\tfrac12,k}^{n+1} = 0, \qquad E_{y,N_x,j+\tfrac12,k}^{n+1} = 0.
-\end{equation}
-Hence the first and last interior tridiagonal equations are
-\begin{equation}
-    \beta_{y2} E_{y,1,j+\tfrac12,k}^{n+1} - \gamma_{y2} E_{y,2,j+\tfrac12,k}^{n+1} = \mathrm{RHS},
-\end{equation}
-and
-\begin{equation}
-    -\alpha_{y2} E_{y,N_x-2,j+\tfrac12,k}^{n+1} + \beta_{y2} E_{y,N_x-1,j+\tfrac12,k}^{n+1} = \mathrm{RHS},
-\end{equation}
-respectively.
-
-Note that we do not need to explicitly impose $\hat{\mathbf{n}} \cdot \mathbf{B} = 0$ separately. For an $x$-normal wall, the magnetic update on the boundary plane $i=i_b$, with $i_b \in \{0,N_x\}$, is
-\begin{equation}
-    B_x^{n+1}(i_b,j,k)
-    = B_x^n(i_b,j,k)
-    + \frac{\Delta t}{2}\left[
-        \frac{E_y^{n+\frac12}(i_b,j,k+1)-E_y^{n+\frac12}(i_b,j,k)}{\Delta z}
-        - \frac{E_z^{n+1}(i_b,j+1,k)-E_z^{n+1}(i_b,j,k)}{\Delta y}
-    \right].
-\end{equation}
-Since the PEC condition gives
-\begin{equation}
-    E_y(i_b,j,k) = 0, \qquad E_z(i_b,j,k) = 0
-\end{equation}
-for all $j$ and $k$, it follows that
-\begin{equation}
-    B_x^{n+1}(i_b,j,k) = B_x^n(i_b,j,k).
-\end{equation}
-Therefore, if
-\begin{equation}
-    B_x^0(i_b,j,k) = 0,
-\end{equation}
-then
-\begin{equation}
-    B_x^n(i_b,j,k) = 0
-\end{equation}
-is already satisfied for all $n$.
 
 \section{External Excitation}
 
