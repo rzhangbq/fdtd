@@ -1265,7 +1265,11 @@ Hard electric sources are not part of this path. Soft electric sources never ove
 
 \section{Lumped Inductance}
 
-A lumped inductor is introduced as an additional current density $\mathbf{J}_\mathrm{L}$ in Amp\`ere's law,
+ADI removes the Maxwell CFL restriction, so a lumped inductor must not reintroduce a local timestep limit from the $LC$ scale $\omega_L\sim\sqrt{\kappa/\varepsilon}$. This section embeds an ideal inductor in the ADI electric update by a centered trapezoidal coupling: it is nondissipative on the isolated field--inductor subsystem and places no restriction on $\omega_L\Delta t$.
+
+\subsection{Continuum model}
+
+A lumped inductor enters Amp\`ere's law as an additional current density $\mathbf{J}_\mathrm{L}$,
 \begin{subequations}\label{eq:maxwell-inductor}
     \begin{align}
         \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{L}
@@ -1274,7 +1278,7 @@ A lumped inductor is introduced as an additional current density $\mathbf{J}_\ma
         \label{eq:maxwell-faraday-inductor}
     \end{align}
 \end{subequations}
-On each Yee edge that hosts an inductor, the constitutive relation $V=L\,dI/dt$ for an ideal lumped inductor is written in field form. For an $x$-directed edge of length $\Delta x$ and cross-sectional area $\Delta y\,\Delta z$, with lumped inductance $L_x$ assigned to that edge (total inductance, not inductance per unit length),
+On each Yee edge that hosts an inductor, the constitutive relation $V=L\,dI/dt$ is written in field form. For an $x$-directed edge of length $\Delta x$ and face area $\Delta y\,\Delta z$, with total inductance $L_x$ assigned to that edge,
 \begin{equation}
     V = E_x\Delta x,
     \qquad
@@ -1298,45 +1302,33 @@ The $y$ and $z$ components are analogous, with
     \qquad
     \kappa_z = \frac{\Delta z}{\Delta x\,\Delta y\,L_z}.
 \end{equation}
-Away from inductor edges one sets $\kappa=0$ (equivalently $L\to\infty$), so $\mathbf{J}_\mathrm{L}$ is unchanged there and need not be stored or evolved; outside the inductor region, $\mathbf{J}_\mathrm{L}$ should normally be initialized to zero. The Maxwell--Faraday equation \eqref{eq:maxwell-faraday-inductor} is unmodified, and therefore the magnetic ADI updates of Section~3 are unchanged. Only the electric update and the inductor ODE are coupled.
+Away from inductor edges one sets $\kappa=0$ (equivalently $L\to\infty$), so $\mathbf{J}_\mathrm{L}$ need not be stored or evolved there; outside the inductor region it should normally be initialized to zero. Faraday's law \eqref{eq:maxwell-faraday-inductor} is unmodified, so the magnetic ADI updates of Section~3 are unchanged. Only the electric update and the inductor ODE are coupled.
 
-For FDTD/ADI with lumped $R$, $L$, and $C$, one may treat the element explicitly, semi-implicitly, or fully implicitly.
-An \emph{explicit} update of $J_\mathrm{L}$ from a known $E$ (as in the leapfrog macroscopic FDTD inductor) reintroduces a stability restriction set by the local $LC$ scale $\omega_L\sim\sqrt{\kappa/\varepsilon}$, which becomes severe at the large CFLs that motivate ADI.
-For the isolated lossless field--inductor subsystem, the centered trapezoidal discretization below has amplification factors of unit modulus for every $\Delta t$ and therefore introduces no lumped-inductor stability restriction; when incorporated consistently into an energy-stable ADI discretization, it preserves the unconditional stability property of the underlying ADI method.
-A fully one-sided implicit inductor update can also remove the inductor timestep restriction, but introduces numerical dissipation that can be interpreted as an artificial resistive loss.
-We therefore adopt the centered trapezoidal coupling.
-
-\subsection{Centered Trapezoidal Inductor Coupling}
+\subsection{Centered trapezoidal coupling}
 
 Over a half step of size $\Delta t/2$, discretize \eqref{eq:inductor-kappa} by the trapezoidal rule,
 \begin{equation}\label{eq:inductor-trapezoidal}
-    \frac{J_{\mathrm{L},x}^{n+\frac12}-J_{\mathrm{L},x}^{n}}{\Delta t/2}
-    = \kappa_x\,\frac{E_x^{n+\frac12}+E_x^{n}}{2},
+    \frac{J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}-J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}}{\Delta t/2}
+    = \kappa_{x,i+\tfrac12,j,k}\,\frac{E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}}{2}.
 \end{equation}
-which rearranges to
-\begin{equation}\label{eq:inductor-j-semi}
-    J_{\mathrm{L},x}^{n+\frac12}
-    = J_{\mathrm{L},x}^{n}
-    + \frac{\Delta t}{4}\,\kappa_x\bigl(E_x^{n+\frac12}+E_x^{n}\bigr).
-\end{equation}
-For a centered, nondissipative coupling, Amp\`ere's law must contain the averaged current $(J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n})/2$, not the fully advanced value $J_{\mathrm{L},x}^{n+\frac12}$ alone. Using the same centered conductivity average as in Section~3,
+Amp\`ere's law must use the same centered average $(J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n})/2$; using only the advanced value $J_{\mathrm{L},x}^{n+\frac12}$ is dissipative (Section~\ref{sec:inductor-energy}). With the same conductivity average as in Section~3,
 \begin{equation}
-    \varepsilon\frac{E_x^{n+\frac12}-E_x^{n}}{\Delta t/2}
-    + \sigma\frac{E_x^{n+\frac12}+E_x^{n}}{2}
-    + \frac{J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n}}{2}
+    \varepsilon_{i+\tfrac12,j,k}\frac{E_{x,i+\tfrac12,j,k}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n}}{\Delta t/2}
+    + \sigma_{i+\tfrac12,j,k}\frac{E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}}{2}
+    + \frac{J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}+J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}}{2}
         = [H_1],
     \label{eq:first-e-ex-inductor-semi}
 \end{equation}
-where $[H_1]$ is unchanged from Section~3. From \eqref{eq:inductor-j-semi},
+where $[H_1]$ is unchanged from Section~3. From \eqref{eq:inductor-trapezoidal},
 \begin{equation}
-    \frac{J_{\mathrm{L},x}^{n+\frac12}+J_{\mathrm{L},x}^{n}}{2}
-    = J_{\mathrm{L},x}^{n}
-    + \frac{\Delta t}{8}\,\kappa_x\bigl(E_x^{n+\frac12}+E_x^{n}\bigr).
+    \frac{J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}+J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}}{2}
+    = J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}
+    + \frac{\Delta t}{8}\,\kappa_{x,i+\tfrac12,j,k}\bigl(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\bigr).
 \end{equation}
 Substituting into \eqref{eq:first-e-ex-inductor-semi} and collecting unknowns gives
 \begin{equation}
-    \left(\frac{2\varepsilon}{\Delta t}+\frac{\sigma}{2}+\frac{\Delta t}{8}\kappa_x\right)E_x^{n+\frac12}
-    = \left(\frac{2\varepsilon}{\Delta t}-\frac{\sigma}{2}-\frac{\Delta t}{8}\kappa_x\right)E_x^{n}
+    \left(\frac{2\varepsilon}{\Delta t}+\frac{\sigma}{2}+\frac{\Delta t}{8}\kappa_x\right)E_{x}^{n+\frac12}
+    = \left(\frac{2\varepsilon}{\Delta t}-\frac{\sigma}{2}-\frac{\Delta t}{8}\kappa_x\right)E_{x}^{n}
     + [H_1]
     - J_{\mathrm{L},x}^{n}.
 \end{equation}
@@ -1357,15 +1349,24 @@ When $\kappa=0$ these reduce to \eqref{eq:adi-half-coefficients}. The electric u
     + C_{b,i+\tfrac12,j,k}^{L}\Bigl([H_1]-J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}\Bigr).
     \label{eq:first-e-ex-adi-inductor-semi}
 \end{equation}
-Thus, the inductance modifies the local diagonal electric coefficient through $\kappa$ in $C_a^{L}$ and $C_b^{L}$, while the previously known current $J_{\mathrm{L}}^{n}$ appears as a known right-hand-side term. After $E_x^{n+\frac12}$ is obtained, $J_{\mathrm{L},x}$ is updated by \eqref{eq:inductor-j-semi}.
+Thus $\kappa$ modifies the local diagonal coefficients $C_a^{L}$ and $C_b^{L}$, while the known current $J_{\mathrm{L}}^{n}$ enters the right-hand side. After $E_x^{n+\frac12}$ is obtained, rearrange \eqref{eq:inductor-trapezoidali} to advance $J_{\mathrm{L},x}$ by
+\begin{equation}
+    J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}
+    = J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}
+    + \frac{\Delta t}{4}\,\kappa_{x,i+\tfrac12,j,k}\bigl(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\bigr).
+    \label{eq:inductor-j-semi}
+\end{equation}
 
-On an inductor edge, where $\kappa>0$, and with $\sigma=0$ and no curl contribution, define the local electromagnetic--inductor energy by
+\subsection{Local energy and why the current must be averaged}
+\label{sec:inductor-energy}
+
+On an inductor edge with $\kappa>0$, $\sigma=0$, and no curl contribution, define
 \begin{equation}
     \mathcal{E}
     = \frac{\varepsilon}{2}E^2
     + \frac{1}{2\kappa}J_{\mathrm{L}}^2.
 \end{equation}
-This energy is exactly conserved by the centered pair
+The centered pair
 \begin{equation}
     \varepsilon\frac{E^{n+\frac12}-E^{n}}{\Delta t/2}
     + \frac{J_{\mathrm{L}}^{n+\frac12}+J_{\mathrm{L}}^{n}}{2}
@@ -1374,18 +1375,17 @@ This energy is exactly conserved by the centered pair
     \frac{J_{\mathrm{L}}^{n+\frac12}-J_{\mathrm{L}}^{n}}{\Delta t/2}
     = \kappa\frac{E^{n+\frac12}+E^{n}}{2},
 \end{equation}
-so $\mathcal{E}^{n+\frac12}-\mathcal{E}^{n}=0$.
-By contrast, replacing the averaged current in Amp\`ere by the fully advanced value $J_{\mathrm{L}}^{n+\frac12}$ yields
+conserves this energy exactly: $\mathcal{E}^{n+\frac12}-\mathcal{E}^{n}=0$. Replacing the Amp\`ere current by the fully advanced value $J_{\mathrm{L}}^{n+\frac12}$ instead yields
 \begin{equation}
     \mathcal{E}^{n+\frac12}-\mathcal{E}^{n}
     = -\frac{1}{2\kappa}\bigl(J_{\mathrm{L}}^{n+\frac12}-J_{\mathrm{L}}^{n}\bigr)^2
     \le 0,
 \end{equation}
-and is therefore numerically dissipative even though the inductor ODE itself is integrated by the trapezoidal rule.
+so the scheme is numerically dissipative even though the inductor ODE itself is integrated by the trapezoidal rule. That one-sided choice removes the $\omega_L\Delta t$ restriction but acts like an artificial resistance; we reject it for that reason.
 
-\subsection{Effect on the ADI Tridiagonal System}
+\subsection{Effect on the ADI tridiagonal system}
 
-The magnetic update for $H_z^{n+\frac12}$ is identical to Section~3. Substituting it into \eqref{eq:first-e-ex-adi-inductor-semi} yields the same stencil structure as \eqref{eq:first-e-ex-adi-tridiagonal}, but with $C_a\to C_a^{L}$ and $C_b\to C_b^{L}$:
+The magnetic update for $H_z^{n+\frac12}$ is identical to Section~3. Substituting it into \eqref{eq:first-e-ex-adi-inductor-semi} yields the same stencil as \eqref{eq:first-e-ex-adi-tridiagonal}, but with $C_{a,i+\tfrac12,j,k}\to C_{a,i+\tfrac12,j,k}^{L}$ and $C_{b,i+\tfrac12,j,k}\to C_{b,i+\tfrac12,j,k}^{L}$:
 \begin{align}
     \begin{split}
         -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
@@ -1411,24 +1411,27 @@ where
     q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                              \\
     r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
 \end{align}
-The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_b^{L}$ and $C_a^{L}$. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way. The second half-step is analogous: the current update is
+The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_{b,i+\tfrac12,j,k}^{L}$ and $C_{a,i+\tfrac12,j,k}^{L}$. The $E_y$ and $E_z$ first-half systems are modified in the same way. 
+
+The current update is
 \begin{equation}
-    J_{\mathrm{L},x}^{n+1}
-    = J_{\mathrm{L},x}^{n+\frac12}
-    + \frac{\Delta t}{4}\,\kappa_x\bigl(E_x^{n+1}+E_x^{n+\frac12}\bigr),
+    J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}
+    = J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}
+    + \frac{\Delta t}{4}\,\kappa_{x,i+\tfrac12,j,k}\bigl(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\bigr).
 \end{equation}
-while the corresponding Amp\`ere stage uses the centered current $(J_{\mathrm{L},x}^{n+1}+J_{\mathrm{L},x}^{n+\frac12})/2$, which after elimination produces the same $\Delta t\,\kappa/8$ modification of the electric coefficients and the known right-hand-side term $-J_{\mathrm{L},x}^{n+\frac12}$.
 
-\subsection{Stability Remarks}
+The second half-step is analogous.
 
-Eliminating $J_\mathrm{L}$ locally produces an oscillator of frequency $\omega_L=\sqrt{\kappa/\varepsilon}$. For the isolated lossless field--inductor subsystem, the centered trapezoidal discretization has amplification factors of unit modulus for every $\Delta t$ and therefore introduces no lumped-inductor stability restriction.
-Unit-modulus amplification of the local oscillator alone is not, by itself, a complete proof of unconditional stability of the full spatial ADI splitting; that property follows only when the inductor coupling is embedded consistently in an energy-stable ADI discretization.
-By contrast, replacing \eqref{eq:inductor-j-semi} by the explicit rule
-$J_{\mathrm{L}}^{n+\frac12}=J_{\mathrm{L}}^{n}+(\Delta t/2)\kappa E^{n}$
-and inserting that known current only as a right-hand-side source leaves $\omega_L\Delta t$ constrained, defeating the purpose of ADI at large CFL.
+\subsection{Stability}
 
-\subsection{Remark on the Present Implementation}
+Eliminating $J_\mathrm{L}$ locally produces an oscillator of frequency $\omega_L=\sqrt{\kappa/\varepsilon}$. On the isolated lossless field--inductor subsystem, the centered scheme of Section~\ref{sec:inductor-energy} has amplification factors of unit modulus for every $\Delta t$, so it introduces no lumped-inductor CFL. That local fact is not by itself a complete proof for the full spatial ADI splitting; unconditional stability of the coupled scheme requires that the same centered coupling be embedded consistently in an energy-stable ADI discretization.
 
-In the current Artemis macroscopic ADI push, soft electric sources are added to the ADI right-hand side, but the lumped-inductor current $\mathbf{J}_\mathrm{L}$ is not. The inductor object still advances $\mathbf{J}_\mathrm{L}$ explicitly when enabled, yet that current is unused by \texttt{MacroscopicEvolveADI}. The modification needed for a stable ADI inductor is therefore: (i)~replace $C_a,C_b$ by $C_a^{L},C_b^{L}$ on inductor edges; (ii)~add $-C_b^{L}J_{\mathrm{L}}^{\mathrm{old}}$ to the field-update form, or equivalently add $-J_{\mathrm{L}}^{\mathrm{old}}$ to the normalized tridiagonal right-hand side; and (iii)~update $J_{\mathrm{L}}$ with the trapezoidal rule \eqref{eq:inductor-j-semi} after each electric solve.
+By contrast, the explicit rule
+$J_{\mathrm{L}}^{n+\frac12}=J_{\mathrm{L}}^{n}+(\Delta t/2)\kappa E^{n}$,
+with the known current inserted only as a right-hand-side source, leaves $\omega_L\Delta t$ constrained and defeats the purpose of ADI at large CFL. That is the leapfrog macroscopic FDTD inductor, and it is unsuitable here.
+
+\subsection{Present implementation}
+
+In the current Artemis macroscopic ADI push, soft electric sources are added to the ADI right-hand side, but $\mathbf{J}_\mathrm{L}$ is not. The inductor object still advances $\mathbf{J}_\mathrm{L}$ explicitly when enabled, yet that current is unused by \texttt{MacroscopicEvolveADI}. A stable ADI inductor therefore requires: (i)~replace $C_a,C_b$ by $C_a^{L},C_b^{L}$ on inductor edges; (ii)~add $-C_b^{L}J_{\mathrm{L}}^{\mathrm{old}}$ to the field-update form, or equivalently $-J_{\mathrm{L}}^{\mathrm{old}}$ to the normalized tridiagonal right-hand side; and (iii)~update $J_{\mathrm{L}}$ with \eqref{eq:inductor-j-semi} after each electric solve.
 
 \end{document}
