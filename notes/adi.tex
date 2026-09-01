@@ -25,7 +25,7 @@
 
 % \input{structure.tex} % Include the file specifying the document structure and custom commands
 
-\usepackage{indentfirst}\setlength{\parindent}{0em}
+% \usepackage{indentfirst}\setlength{\parindent}{0em}
 \usepackage{listings}
 \usepackage{float}
 \usepackage{amsmath,amsfonts,stmaryrd,amssymb} % Math packages
@@ -1020,11 +1020,161 @@ for which $\lvert\lambda\rvert=1$ indicating unconditional stability of the ADI 
 \begin{equation}
     \arg(\lambda)=-2\arctan(\nu),
 \end{equation}
-so the ADI phase velocity is
+so the ADI numerical angular frequency is
 \begin{equation}
     \omega_{\mathrm{ADI}}(k_x) = \frac{2}{\Delta t}\,\arctan\!\left(S\sin\frac{k_x\Delta x}{2}\right).
     \label{eq:adi-dispersion-relation}
 \end{equation}
+The corresponding numerical phase velocity is
+\begin{equation}
+    v_{p,\mathrm{ADI}}(k_x)=\frac{\omega_{\mathrm{ADI}}(k_x)}{k_x},
+\end{equation}
+which generally differs from $c$ and therefore exhibits numerical dispersion.
+
+\subsection{Numerical experiments}
+
+\paragraph{Initial-value problem verification}
+The numerical dispersion relation was verified with a PEC standing wave and a periodic traveling wave. Both cases used the macroscopic vacuum ADI solver with the target resolution
+\begin{equation}
+    k\Delta z \simeq 2.15\times10^{-3}
+\end{equation}
+and CFL numbers $S=c\Delta t/\Delta z=64$, $128$, $256$, and $512$. In both cases $N_x=N_y=8$. Each simulation was evolved for sixteen periods of the continuum frequency $f_0=ck/(2\pi)$. The surface integral $\int E_y\,\mathrm{d}x\,\mathrm{d}y$ was sampled on a surface normal to $z$ at $z=L_z/4$, approximately sixteen times per period. The dominant frequency was extracted from the last half of the signal using a Hann window, eightfold zero padding, and normalization by the number of samples.
+\begin{figure}[htpb]
+    \centering
+    \begin{subfigure}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{png_out/pec_standing_dispersion_vs_cfl.png}
+        \caption{Normalized frequency versus CFL number.}
+        \label{fig:adi-phase-velocity-standing-dispersion}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.65\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{png_out/pec_standing_resonance_vs_cfl.png}
+        \caption{Time histories and corresponding frequency spectra.}
+        \label{fig:adi-phase-velocity-standing-spectra}
+    \end{subfigure}
+    \caption{Numerical verification of the ADI dispersion relation using PEC standing and periodic traveling waves.}
+    \label{fig:adi-phase-velocity-standing}
+\end{figure}
+
+Both tests used $L_z=8\,\mu\mathrm{m}$ and $N_z=2928$, corresponding to one wavelength across the domain:
+\begin{equation}
+    k=\frac{2\pi}{L_z},\qquad
+    k\Delta z=\frac{2\pi}{N_z}\simeq2.146\times10^{-3},\qquad
+    f_0\simeq3.75\times10^{13}\ \mathrm{Hz}.
+\end{equation}
+For the PEC case, perfect-electric-conductor boundaries were imposed at $z=0$ and $z=L_z$, with periodic boundaries in $x$ and $y$, and the standing wave was initialized as
+\begin{equation}
+    E_y=E_0\sin(2\pi z/L_z),\qquad \mathbf{B}=0.
+\end{equation}
+For the periodic case, periodic boundaries were imposed in all directions and the traveling wave was initialized as
+\begin{equation}
+    E_y=E_0\sin(2\pi z/L_z),\qquad B_x=-E_y/c.
+\end{equation}
+
+The measured FFT peak was divided by $f_0$. For this fixed spatial mode the normalized frequency is also the normalized phase velocity, $f/f_0=v_p/c$, and the analytic ADI prediction is
+\begin{equation}
+    \frac{f_{\mathrm{ADI}}}{f_0}
+    =\frac{2\arctan\!\left[S\sin(k\Delta z/2)\right]}{S\,k\Delta z}.
+\end{equation}
+
+
+Figure~\ref{fig:adi-phase-velocity-standing} compares the measured frequencies with the analytic dispersion relation and shows the corresponding time histories and spectra. Both the periodic traveling-wave case and the PEC standing-wave case show good agreement with the analytical frequency shift, verifying the ADI dispersion relation. The agreement of both initial-value problems also indicates that the PEC boundary does not introduce observable additional error. 
+
+\paragraph{Soft excitation verification}
+
+The dispersion relation was also tested by exciting the PEC cavity from initially zero fields. The geometry, material parameters, resolution, CFL numbers, run duration, and boundary conditions were identical to those of the PEC standing-wave test above. Only $E_y$ was excited, using the soft source
+\begin{equation}
+    S_{E_y}(z,t)
+    =E_0\frac{\Delta t}{T_P}
+    \sin\!\left(\frac{2\pi z}{L_z}\right)
+    \exp\!\left[-\frac{(t-3T_P)^2}{2T_P^2}\right]
+    \sin(2\pi f_0t),
+\end{equation}
+where $E_0=1$, $f_0=c/L_z$, and $T_P=1/f_0$. Thus the source has the spatial profile of the one-wavelength cavity mode and a Gaussian envelope centered at $3T_P$ with a width of one period. The factor $\Delta t/T_P$ keeps the total excitation approximately independent of the CFL number. No magnetic excitation was applied.
+\begin{figure}[htpb]
+    \centering
+    \begin{subfigure}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{png_out/pec_soft_dispersion_vs_cfl.png}
+        \caption{Normalized frequency versus CFL number.}
+        \label{fig:adi-phase-velocity-soft-dispersion}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.65\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{png_out/pec_soft_resonance_vs_cfl.png}
+        \caption{Time histories and corresponding frequency spectra.}
+        \label{fig:adi-phase-velocity-soft-spectra}
+    \end{subfigure}
+    \caption{Numerical verification of the ADI dispersion relation using PEC soft excitation and periodic traveling waves.}
+    \label{fig:adi-phase-velocity-soft}
+\end{figure}
+
+The electric field was sampled at the mode antinode $z=L_z/4$ at approximately sixteen samples per period. As in the initial-value tests, the dominant frequency was extracted from the last half of the sixteen-period signal using a Hann-windowed, zero-padded Fourier transform. The measured frequencies were compared with \eqref{eq:adi-dispersion-relation} for $S=64$, $128$, $256$, and $512$. A periodic traveling-wave initial-value problem on the same grid provided a reference.
+
+Figure~\ref{fig:adi-phase-velocity-soft} compares the measured frequencies with the analytic dispersion relation and shows the corresponding time histories and spectra. Both the periodic traveling-wave case and the PEC soft-excitation case show good agreement with the analytical frequency shift. However, the soft-excitation case shows a larger amplitude difference as the CFL number increases.
+
+Indeed, Figure~\ref{fig:adi-amplitude-soft-vs-standing} shows that although the two cases have almost the same frequency behavior, the standing-wave peak amplitude remains nearly constant, whereas the soft-excitation peak decreases significantly as the CFL number increases.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=\linewidth]{png_out/pec_soft_vs_standing_cfl.png}
+    \caption{Comparison of the amplitude of the PEC soft-excitation and PEC standing-wave cases with respect to the CFL number.}
+    \label{fig:adi-amplitude-soft-vs-standing}
+\end{figure}
+
+To determine the origin of this amplitude variation, the response was measured over a range of CFL numbers for several excitation frequencies, as is shown in Figure~\ref{fig:adi-frequency-soft-vs-standing}. Noticeably, the response frequency is independent of the excitation frequency, while the amplitude is not. However, the amplitude does not always decrease with increasing CFL number, it also increases for some excitation frequencies. Generally, when excitation frequency is smaller than the true response frequency, the amplitude increases with increasing CFL number, and when excitation frequency is larger than the true response frequency, the amplitude decreases with increasing CFL number.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=\linewidth]{png_out/pec_soft_drive_freq_vs_cfl.png}
+    \caption{Comparison of the frequency of the PEC soft-excitation and PEC standing-wave cases with respect to the CFL number for different excitation frequencies.}
+    \label{fig:adi-frequency-soft-vs-standing}
+\end{figure}
+
+\paragraph{The origin of the amplitude variation}
+After the finite-duration source has vanished, the cavity oscillates at its intrinsic numerical frequency $\omega_{\mathrm{ADI}}(S)$. The experiments show that $\omega_{\mathrm{ADI}}(S)$ is independent of the excitation frequency $\omega_d$. The residual amplitude, however, is determined by the spectral overlap of the source pulse with this cavity mode. For the Gaussian-modulated sinusoidal source used here, the positive-frequency contribution is approximately
+\begin{equation}
+    A(S)\propto
+    \exp\!\left[
+        -\frac{T_P^2}{2}
+        \bigl(\omega_{\mathrm{ADI}}(S)-\omega_d\bigr)^2
+    \right].
+\end{equation}
+
+Besides this detuning effect, the finite temporal sampling of the soft source changes the amount of drive injected into the cavity. The carrier is sampled once per time step with spacing $\Delta t=S\Delta z/c$. Representing each sampled value over one time-step interval gives the discrete-injection factor
+\begin{equation}
+    \operatorname{sinc}\!\left(\frac{\omega_d\Delta t}{2}\right)
+    =
+    \frac{\sin(\omega_d\Delta t/2)}{\omega_d\Delta t/2}.
+\end{equation}
+This factor is separate from the ADI dispersion relation: it describes the loss of effective drive amplitude caused by resolving the carrier with a finite number of time steps. Combining the two effects gives the amplitude model
+\begin{equation}
+    A(S)\propto
+    \underbrace{
+        \exp\!\left[
+            -\frac{T_P^2}{2}
+            \bigl(\omega_{\mathrm{ADI}}(S)-\omega_d\bigr)^2
+        \right]
+    }_{\text{drive--mode detuning}}
+    \underbrace{
+        \operatorname{sinc}\!\left(\frac{\omega_d\Delta t}{2}\right)
+    }_{\text{discrete drive injection}}.
+\end{equation}
+For the present grid, increasing the CFL number from $64$ to $512$ reduces the number of time steps per drive period from approximately $46$ to $6$. At $S=512$, $\omega_d\Delta t/2=\pi S/N_z\simeq0.55$ and the injection factor is approximately $0.95$. The detuning factor alone predicts an amplitude ratio of approximately $0.865$, whereas inclusion of the discrete-injection factor gives $0.822$, close to the measured value $0.827$. This correction applies only to the externally driven case and is absent from the standing-wave initial-value problem.
+
+Because $\omega_{\mathrm{ADI}}(S)$ decreases as the CFL number increases, the response grows when this shift moves the numerical cavity frequency toward $\omega_d$ and decreases when it moves the cavity frequency away from $\omega_d$. If the numerical frequency crosses the excitation frequency, the amplitude reaches a maximum near the crossing and the trend reverses. The observed CFL dependence therefore reflects drive--mode detuning, rather than numerical damping of the ADI mode; temporal sampling of the source may introduce an additional amplitude error at the largest CFL numbers.
+
+Figure~\ref{fig:adi-amplitude-soft-vs-standing-ref} compares the measured soft-excitation response with the detuning and discrete-injection models. The soft-excitation amplitude curve exactly matches our detuning and discrete-injection model.
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=\linewidth]{png_out/pec_soft_vs_standing_cfl_ref.png}
+    \caption{Amplitude and frequency of the PEC soft-excitation and standing-wave responses versus CFL number. The amplitude reference curves include the detuning-only model and the combined detuning and discrete-injection model.}
+    \label{fig:adi-amplitude-soft-vs-standing-ref}
+\end{figure}
+
 
 \section{External Excitation}
 
@@ -1194,7 +1344,7 @@ When $\kappa=0$ these reduce to \eqref{eq:adi-half-coefficients}. The electric u
     + C_{b,i+\tfrac12,j,k}^{L}\Bigl([H_1]-J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}\Bigr).
     \label{eq:first-e-ex-adi-inductor-semi}
 \end{equation}
-Thus $\kappa$ modifies the local diagonal coefficients $C_a^{L}$ and $C_b^{L}$, while the known current $J_{\mathrm{L}}^{n}$ enters the right-hand side. After $E_x^{n+\frac12}$ is obtained, rearrange \eqref{eq:inductor-trapezoidali} to advance $J_{\mathrm{L},x}$ by
+Thus $\kappa$ modifies the local diagonal coefficients $C_a^{L}$ and $C_b^{L}$, while the known current $J_{\mathrm{L}}^{n}$ enters the right-hand side. After $E_x^{n+\frac12}$ is obtained, rearrange \eqref{eq:inductor-trapezoidal} to advance $J_{\mathrm{L},x}$ by
 \begin{equation}
     J_{\mathrm{L},x,i+\tfrac12,j,k}^{n+\frac12}
     = J_{\mathrm{L},x,i+\tfrac12,j,k}^{n}
