@@ -855,19 +855,9 @@ then
 \end{equation}
 is already satisfied for all $n$.
 
-\section{Dispersion and PEC Normal-Mode Analysis}
+\section{Dispersion Analysis}
 
-This section addresses two related but distinct questions. First, on an infinite or periodic grid, we prescribe a Fourier wavenumber and determine the temporal eigenvalue; this gives the bulk numerical dispersion relation. Second, on a half-space terminated by a PEC, we prescribe a possible growing temporal eigenvalue and any tangential Fourier wavenumber, determine the admissible spatial roots normal to the wall, and test whether their linear combination can satisfy the PEC condition. The second calculation is the discrete boundary normal-mode analogue of a Laplace--Fourier half-plane analysis.
-
-We separate the geometries because the boundary-normal coordinate cannot be Fourier-transformed. The calculations below proceed through three model problems:
-\begin{enumerate}
-    \item the bulk periodic problem, used to derive dispersion;
-    \item an $x$-normal PEC with no tangential variation, used as a one-dimensional boundary warm-up;
-    \item a $y$-normal PEC with Fourier modes in both tangential directions, used for the full three-dimensional Maxwell boundary problem.
-\end{enumerate}
-In each half-space problem the stability question is whether a nontrivial mode can be both temporally growing, $|\lambda|>1$, and spatially bounded away from the wall.
-
-Begin with a homogeneous-vacuum wave propagating in the $x$-direction with
+We analyze the homogeneous-vacuum ADI scheme for a wave propagating in the $x$-direction with
 \begin{equation}
     E_x=E_y=0,\qquad H_x=H_z=0,
 \end{equation}
@@ -879,7 +869,9 @@ For simplicity, we consider the case of vacuum media. Set $\sigma=0$, $\varepsil
 \end{equation}
 The half-step coefficients \eqref{eq:adi-half-coefficients} are then
 \begin{equation}
-    C_a=1,\qquad C_b=\frac{\Delta t}{2\varepsilon_0},\qquad D_b=\frac{\Delta t}{2\mu_0}.
+    C_a=1,\qquad
+    C_b=\frac{\Delta t}{2\varepsilon_0},\qquad
+    D_b=\frac{\Delta t}{2\mu_0}.
     \label{eq:adi-dispersion-vacuum-coefficients}
 \end{equation}
 Define the coefficient $\gamma$ by
@@ -889,17 +881,19 @@ Define the coefficient $\gamma$ by
 
 Define the two staggered first-difference operators by
 \begin{align}
-    \left(\delta_x^{E}E_z\right)_{i+\tfrac12,j,k+\tfrac12} & :=\frac{E_{z,i+1,j,k+\tfrac12}-E_{z,i,j,k+\tfrac12}}{\Delta x},
-    \label{eq:adi-delta-x-E} \\
-    \left(\delta_x^{H}H_y\right)_{i,j,k+\tfrac12} & :=\frac{H_{y,i+\tfrac12,j,k+\tfrac12}-H_{y,i-\tfrac12,j,k+\tfrac12}}{\Delta x}.
+    \left(\delta_x^{E}E_z\right)_{i+\tfrac12,j,k+\tfrac12}
+     & :=\frac{E_{z,i+1,j,k+\tfrac12}-E_{z,i,j,k+\tfrac12}}{\Delta x},
+    \label{eq:adi-delta-x-E}                                                           \\
+    \left(\delta_x^{H}H_y\right)_{i,j,k+\tfrac12}
+     & :=\frac{H_{y,i+\tfrac12,j,k+\tfrac12}-H_{y,i-\tfrac12,j,k+\tfrac12}}{\Delta x}.
     \label{eq:adi-delta-x-H}
 \end{align}
 Thus $\delta_x^{E}$ maps the $E_z$ grid to the $H_y$ grid, while $\delta_x^{H}$ maps the $H_y$ grid to the $E_z$ grid. Their composition is the centered second difference
 \begin{equation}
-    \begin{split}
-        \left(\delta_x^2E_z\right)_{i,j,k+\tfrac12} & :=\left(\delta_x^{H}\delta_x^{E}E_z\right)_{i,j,k+\tfrac12} \\
-        & =\frac{E_{z,i-1,j,k+\tfrac12}-2E_{z,i,j,k+\tfrac12}+E_{z,i+1,j,k+\tfrac12}}{\Delta x^2}.
-    \end{split}
+    \left(\delta_x^2E_z\right)_{i,j,k+\tfrac12}
+    :=\left(\delta_x^{H}\delta_x^{E}E_z\right)_{i,j,k+\tfrac12}
+    =\frac{E_{z,i-1,j,k+\tfrac12}-2E_{z,i,j,k+\tfrac12}
+    +E_{z,i+1,j,k+\tfrac12}}{\Delta x^2}.
     \label{eq:adi-delta-x-squared}
 \end{equation}
 
@@ -907,7 +901,8 @@ Thus $\delta_x^{E}$ maps the $E_z$ grid to the $H_y$ grid, while $\delta_x^{H}$ 
 
 Restricting \eqref{eq:first-e-ez-adi-tridiagonal}--\eqref{eq:adi-first-hy} to this polarization and multiplying the electric equation by $C_b$, the first half-step is
 \begin{equation}
-    \left(1-\gamma\delta_x^2\right)E_z^{n+\frac12}=E_z^n+C_b\delta_x^{H}H_y^n,
+    \left(1-\gamma\delta_x^2\right)E_z^{n+\frac12}
+    =E_z^n+C_b\delta_x^{H}H_y^n,
     \label{eq:first-e-ez-adi-tridiagonal-dispersion}
 \end{equation}
 \begin{equation}
@@ -932,32 +927,26 @@ Both magnetic half-updates use the same intermediate electric field; therefore,
 \subsection{Plane-wave ansatz and Yee symbols}
 
 At any time level $m$, write a spatial Fourier mode on the staggered Yee grid as
-\begin{equation}
-    \begin{aligned}
-        E_{z,i,j,k+\tfrac12}^{m} & =\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x}, \\
-        H_{y,i+\tfrac12,j,k+\tfrac12}^{m} & =\widehat H_y^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}.
-    \end{aligned}
+\begin{align}
+    E_{z,i,j,k+\tfrac12}^{m} & =\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x}, \\
+    H_{y,i+\tfrac12,j,k+\tfrac12}^{m} & =\widehat H_y^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}.
     \label{eq:adi-dispersion-spatial-mode}
-\end{equation}
+\end{align}
 Plugging into \eqref{eq:adi-delta-x-E} gives
-\begin{equation}
-    \begin{split}
-        \left(\delta_x^{E}E_z^m\right)_{i+\tfrac12,j,k+\tfrac12} & =\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
-        & =\mathrm{i}K_x\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x},
-    \end{split}
-\end{equation}
+\begin{align}
+    \left(\delta_x^{E}E_z^m\right)_{i+\tfrac12,j,k+\tfrac12} & =\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
+     & =\mathrm{i}K_x\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x},
+\end{align}
 where
 \begin{equation}
     K_x:=\frac{2}{\Delta x}\sin\!\left(\frac{k_x\Delta x}{2}\right).
     \label{eq:adi-Kx}
 \end{equation}
 Similarly, \eqref{eq:adi-delta-x-H} gives
-\begin{equation}
-    \begin{split}
-        \left(\delta_x^{H}H_y^m\right)_{i,j,k+\tfrac12} & =\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
-        & =\mathrm{i}K_x\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}.
-    \end{split}
-\end{equation}
+\begin{align}
+    \left(\delta_x^{H}H_y^m\right)_{i,j,k+\tfrac12} & =\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
+     & =\mathrm{i}K_x\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}.
+\end{align}
 Consequently, the Fourier symbols of the explicitly defined operators are
 \begin{equation}
     \delta_x^{E}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^{H}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^2\longleftrightarrow-K_x^2.
@@ -972,22 +961,22 @@ For brevity, define the derivative symbol and implicit denominator
     s:=\mathrm{i}K_x,\qquad D:=1+\gamma K_x^2.
     \label{eq:adi-dispersion-s-D}
 \end{equation}
-Applying the symbols \eqref{eq:adi-difference-symbols} to \eqref{eq:first-e-ez-adi-tridiagonal-dispersion}, the first-half electric update becomes
+Substituting into \eqref{eq:first-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the first-half electric update becomes
 \begin{equation}
     D\widehat E_z^{\,n+\frac12} = \widehat E_z^{\,n}+C_bs\widehat H_y^{\,n}.
     \label{eq:adi-dispersion-half1-E}
 \end{equation}
-Applying the same symbols to \eqref{eq:adi-first-hy-dispersion} gives
+Similarly for \eqref{eq:adi-first-hy-dispersion}, we have
 \begin{equation}
     \widehat H_y^{\,n+\frac12} = \widehat H_y^{\,n}+D_bs\widehat E_z^{\,n+\frac12}.
     \label{eq:adi-dispersion-half1-H}
 \end{equation}
-Likewise, \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} becomes
+Substituting into \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the second-half electric update becomes
 \begin{equation}
     \widehat E_z^{\,n+1} = \widehat E_z^{\,n+\frac12}+C_bs\widehat H_y^{\,n+\frac12},
     \label{eq:adi-dispersion-half2-E}
 \end{equation}
-Finally, combining the two magnetic half-steps as in \eqref{eq:adi-second-hy-dispersion} gives
+Similarly for \eqref{eq:adi-second-hy-dispersion}, we have
 \begin{equation}
     \widehat H_y^{\,n+1} = \widehat H_y^{\,n}+2D_bs\widehat E_z^{\,n+\frac12}
     \label{eq:adi-dispersion-full-H}
@@ -999,14 +988,7 @@ Solving \eqref{eq:adi-dispersion-half1-E} for the intermediate electric amplitud
 \begin{equation}
     \widehat E_z^{\,n+\frac12}=\frac{1}{D}\widehat E_z^{\,n}+\frac{C_bs}{D}\widehat H_y^{\,n}.
 \end{equation}
-Using \eqref{eq:adi-dispersion-half1-H} in \eqref{eq:adi-dispersion-half2-E}, and then substituting the intermediate electric amplitude above, gives
-\begin{equation}
-    \begin{split}
-        \widehat E_z^{\,n+1} & =\frac{1-\gamma K_x^2}{D}\widehat E_z^{\,n}+\frac{2C_bs}{D}\widehat H_y^{\,n}, \\
-        \widehat H_y^{\,n+1} & =\frac{2D_bs}{D}\widehat E_z^{\,n}+\frac{1-\gamma K_x^2}{D}\widehat H_y^{\,n},
-    \end{split}
-\end{equation}
-where $C_bD_b=\gamma$, $s^2=-K_x^2$, and $D=1+\gamma K_x^2$ have been used. The one-step map is therefore
+Substitution into \eqref{eq:adi-dispersion-half2-E} and \eqref{eq:adi-dispersion-full-H}, using $C_bD_b=\gamma$ and $s^2=-K_x^2$, gives the one-step map
 \begin{equation}
     \begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n+1}=G\begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n},\qquad G=\frac{1}{D}\begin{pmatrix} 1-\gamma K_x^2 & 2C_b s \\ 2D_b s & 1-\gamma K_x^2 \end{pmatrix}.
     \label{eq:adi-amplification-matrix}
@@ -1017,16 +999,8 @@ where $C_bD_b=\gamma$, $s^2=-K_x^2$, and $D=1+\gamma K_x^2$ have been used. The 
 A time-harmonic mode satisfies
 \begin{equation}
     \begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}^{n+1}=\lambda\begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}^{n},\qquad \lambda=e^{-\mathrm{i}\omega\Delta t}.
-    \label{eq:adi-temporal-mode}
 \end{equation}
-Using \eqref{eq:adi-amplification-matrix}, the characteristic equation can be written as
-\begin{equation}
-    \begin{split}
-        0=D^2\det(G-\lambda I) & =\left(1-\gamma K_x^2-\lambda D\right)^2-4C_bD_bs^2 \\
-        & =\left(1-\gamma K_x^2-\lambda D\right)^2+4\gamma K_x^2.
-    \end{split}
-\end{equation}
-Solving this quadratic for $\lambda$ yields
+The characteristic equation $\det(G-\lambda I)=0$ yields
 \begin{equation}
     \lambda = \frac{1-\gamma K_x^2\pm 2\mathrm{i}\,K_x\sqrt{\gamma}}{1+\gamma K_x^2}.
 \end{equation}
@@ -1042,145 +1016,16 @@ The forward-propagating branch ($\omega>0$) is
 \begin{equation}
     \lambda = \frac{1-\mathrm{i}\nu}{1+\mathrm{i}\nu},
 \end{equation}
-for which $\lvert\lambda\rvert=1$ (unconditional stability of this one-dimensional reduction) and
+for which $\lvert\lambda\rvert=1$ indicating unconditional stability of the ADI scheme and there is no numerical dispersion. The phase angle is
 \begin{equation}
-    \arg(\lambda)=-2\arctan(\nu).
+    \arg(\lambda)=-2\arctan(\nu),
 \end{equation}
-Therefore the ADI numerical dispersion relation is
+so the ADI phase velocity is
 \begin{equation}
-    \boxed{\omega_{\mathrm{ADI}}(k_x) = \frac{2}{\Delta t}\,\arctan\!\left(S\sin\frac{k_x\Delta x}{2}\right).}
+    \omega_{\mathrm{ADI}}(k_x) = \frac{2}{\Delta t}\,\arctan\!\left(S\sin\frac{k_x\Delta x}{2}\right).
     \label{eq:adi-dispersion-relation}
 \end{equation}
-In the continuum limit $k_x\Delta x\to 0$ with fixed $S$, one has $\sin(k_x\Delta x/2)\approx k_x\Delta x/2$ and $\arctan\nu\approx\nu$, hence
-\begin{equation}
-    \omega_{\mathrm{ADI}} \approx \frac{2}{\Delta t}\cdot S\cdot\frac{k_x\Delta x}{2} = ck_x,
-\end{equation}
-as required. The leading truncation error is $O((k_x\Delta x)^2)$ at fixed CFL number, so the phase-velocity error decreases quadratically with cells-per-wavelength.
 
-\subsection{Normal-mode analysis of the PEC boundary}
-
-We now apply the one-dimensional update \eqref{eq:first-e-ez-adi-tridiagonal-dispersion}--\eqref{eq:adi-dispersion-full-hy} to the $x$-normal PEC described in Section~\ref{sec:pec-boundary-conditions}. Consider the left boundary as a half-space problem, $i\geq0$. For the same $E_z$--$H_y$ polarization used above, \eqref{eq:pec-x-walls} reduces to
-\begin{equation}
-    E_{z,0}^m=0
-    \label{eq:adi-pec-normal-E}
-\end{equation}
-at every electric-field stage $m$.
-
-In the bulk ansatz \eqref{eq:adi-dispersion-spatial-mode}, a shift by one cell in $x$ has eigenvalue $e^{\mathrm{i}k_x\Delta x}$, whose modulus is one. A boundary mode must instead allow an unknown complex eigenvalue $\rho$ for this shift. Retaining the temporal factor $\lambda^n$ from \eqref{eq:adi-temporal-mode} and the same Yee staggering as \eqref{eq:adi-dispersion-spatial-mode}, replace $e^{\mathrm{i}k_x\Delta x}$ by $\rho$ and write
-\begin{equation}
-    \begin{aligned}
-        E_{z,i}^n & =\widehat E_z\lambda^n\rho^i, \\
-        H_{y,i+\tfrac12}^n & =\widehat H_y\lambda^n\rho^{i+\tfrac12}.
-    \end{aligned}
-    \label{eq:adi-pec-normal-mode}
-\end{equation}
-Advancing the mode by one full time step multiplies both fields by $\lambda$, so $|\lambda|>1$ corresponds to exponential growth in time. Likewise, increasing $i$ by one in \eqref{eq:adi-pec-normal-mode} gives
-\begin{equation}
-    \frac{E_{z,i+1}^n}{E_{z,i}^n}=\rho,\qquad \frac{H_{y,i+\tfrac32}^n}{H_{y,i+\tfrac12}^n}=\rho.
-\end{equation}
-Thus each one-cell shift away from the PEC multiplies either field by $\rho$, and after $i$ shifts its magnitude contains the factor $|\rho|^i$. Hence boundedness as $i\to+\infty$ requires $|\rho|\leq1$, while $|\rho|<1$ gives exponential decay into the interior and therefore a mode localized near the PEC.
-
-Apply the electric-to-magnetic staggered difference \eqref{eq:adi-delta-x-E} to the first line of \eqref{eq:adi-pec-normal-mode}:
-\begin{equation}
-    \begin{split}
-        \left(\delta_x^EE_z^n\right)_{i+\tfrac12} & =\frac{\widehat E_z\lambda^n\rho^{i+1}-\widehat E_z\lambda^n\rho^i}{\Delta x} \\
-        & =\widehat E_z\lambda^n\rho^{i+\tfrac12}q(\rho),
-    \end{split}
-\end{equation}
-where
-\begin{equation}
-    q(\rho):=\frac{\rho^{1/2}-\rho^{-1/2}}{\Delta x}.
-    \label{eq:adi-pec-q}
-\end{equation}
-Applying the magnetic-to-electric difference \eqref{eq:adi-delta-x-H} gives the same factor:
-\begin{equation}
-    \begin{split}
-        \left(\delta_x^HH_y^n\right)_i & =\frac{\widehat H_y\lambda^n\rho^{i+\tfrac12}-\widehat H_y\lambda^n\rho^{i-\tfrac12}}{\Delta x} \\
-        & =\widehat H_y\lambda^n\rho^i q(\rho).
-    \end{split}
-\end{equation}
-Composing the two staggered first differences consequently multiplies the electric mode by $q(\rho)^2$.\footnote{For a bulk Fourier mode, $\rho=e^{\mathrm{i}k_x\Delta x}$, and \eqref{eq:adi-pec-q} gives $q(\rho)=\bigl(e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}\bigr)/\Delta x=\mathrm{i}K_x$ by \eqref{eq:adi-Kx}. Thus the preceding Fourier analysis is the unit-circle case $|\rho|=1$ of the normal-mode construction.} Thus the Fourier symbols \eqref{eq:adi-difference-symbols} are replaced by
-\begin{equation}
-    \delta_x^E\longleftrightarrow q(\rho),\qquad \delta_x^H\longleftrightarrow q(\rho),\qquad \delta_x^2\longleftrightarrow q(\rho)^2.
-\end{equation}
-
-Write $q:=q(\rho)$. Applying the normal-mode symbols to the first-half electric update \eqref{eq:first-e-ez-adi-tridiagonal-dispersion} gives
-\begin{equation}
-    \left(1-\gamma q^2\right)\widehat E_z^{\,n+\frac12}=\widehat E_z^{\,n}+C_bq\widehat H_y^{\,n}.
-    \label{eq:adi-pec-half1-E}
-\end{equation}
-The first-half magnetic update \eqref{eq:adi-first-hy-dispersion} becomes
-\begin{equation}
-    \widehat H_y^{\,n+\frac12}=\widehat H_y^{\,n}+D_bq\widehat E_z^{\,n+\frac12}.
-    \label{eq:adi-pec-half1-H}
-\end{equation}
-Likewise, the second-half electric update \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} becomes
-\begin{equation}
-    \widehat E_z^{\,n+1}=\widehat E_z^{\,n+\frac12}+C_bq\widehat H_y^{\,n+\frac12},
-    \label{eq:adi-pec-half2-E}
-\end{equation}
-and combining the two magnetic half-steps as in \eqref{eq:adi-dispersion-full-hy} gives
-\begin{equation}
-    \widehat H_y^{\,n+1}=\widehat H_y^{\,n}+2D_bq\widehat E_z^{\,n+\frac12}.
-    \label{eq:adi-pec-full-H}
-\end{equation}
-Equations \eqref{eq:adi-pec-half1-E}--\eqref{eq:adi-pec-full-H} are the normal-mode counterparts of \eqref{eq:adi-dispersion-half1-E}--\eqref{eq:adi-dispersion-full-H}: $\mathrm{i}K_x$ is replaced by $q$, and $1+\gamma K_x^2$ is replaced by $1-\gamma q^2$. Eliminating the intermediate amplitudes exactly as in the amplification-matrix derivation gives
-\begin{equation}
-    G(q)=\frac{1}{1-\gamma q^2}\begin{pmatrix}1+\gamma q^2&2C_bq\\2D_bq&1+\gamma q^2\end{pmatrix}.
-    \label{eq:adi-pec-amplification}
-\end{equation}
-The temporal normal-mode condition is
-\begin{equation}
-    G(q)\begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}=\lambda\begin{pmatrix}\widehat E_z\\\widehat H_y\end{pmatrix}.
-\end{equation}
-Its characteristic equation is
-\begin{equation}
-    0=\left(1-\gamma q^2\right)^2\det\!\left(G(q)-\lambda I\right)=\left[1+\gamma q^2-\lambda\left(1-\gamma q^2\right)\right]^2-4\gamma q^2.
-\end{equation}
-Factoring the resulting quadratic yields
-\begin{equation}
-    \lambda=\frac{1\pm\sqrt{\gamma}\,q}{1\mp\sqrt{\gamma}\,q},
-\end{equation}
-or, equivalently,
-\begin{equation}
-    \sqrt{\gamma}\,q=\pm\frac{\lambda-1}{\lambda+1}.
-    \label{eq:adi-pec-spatial-characteristic}
-\end{equation}
-For $|\lambda|>1$,
-\begin{equation}
-    \Re\left(\frac{\lambda-1}{\lambda+1}\right)=\frac{|\lambda|^2-1}{|\lambda+1|^2}>0,
-\end{equation}
-so the two values of $q$ in \eqref{eq:adi-pec-spatial-characteristic} have real parts of opposite sign.
-
-To recover the actual grid mode, set $z=\rho^{1/2}$. Equation \eqref{eq:adi-pec-q} gives
-\begin{equation}
-    z^2-q\Delta x\,z-1=0.
-    \label{eq:adi-pec-rho-characteristic}
-\end{equation}
-The two roots of \eqref{eq:adi-pec-rho-characteristic} satisfy $z_1z_2=-1$. Since $\rho_j=z_j^2$, their corresponding spatial factors satisfy $\rho_1\rho_2=1$. Moreover, neither root lies on the unit circle when $|\lambda|>1$: if $\rho=e^{\mathrm{i}\theta}$, then \eqref{eq:adi-pec-q} makes $q$ purely imaginary, contradicting $\Re q\neq0$ from \eqref{eq:adi-pec-spatial-characteristic}. Thus exactly one root $\rho_-$ satisfies $|\rho_-|<1$ and is retained by boundedness; its reciprocal is rejected.
-
-Let
-\begin{equation}
-    \Phi_-:=\begin{pmatrix}\widehat E_z\\ \rho_-^{1/2}\widehat H_y\end{pmatrix}
-\end{equation}
-be the staggered interior eigenvector associated with $\rho_-$. The general bounded mode contains one undetermined coefficient,
-\begin{equation}
-    U_i^n=\theta\lambda^n\rho_-^i\Phi_-.
-\end{equation}
-The PEC boundary operator extracts the electric component,
-\begin{equation}
-    \mathcal B_x:=\begin{pmatrix}1&0\end{pmatrix},\qquad K_{\mathrm{PEC}}^{(x)}(\lambda):=\mathcal B_x\Phi_-.
-    \label{eq:adi-pec-x-boundary-matrix}
-\end{equation}
-Substitution into \eqref{eq:adi-pec-normal-E} produces the scalar boundary system
-\begin{equation}
-    K_{\mathrm{PEC}}^{(x)}(\lambda)\theta=0.
-\end{equation}
-For $|\lambda|>1$, $q\neq0$ and the coupled eigenproblem \eqref{eq:adi-pec-amplification} has $\widehat E_z\neq0$. We may therefore normalize $\widehat E_z=1$, for which $K_{\mathrm{PEC}}^{(x)}=[1]$ and
-\begin{equation}
-    \det K_{\mathrm{PEC}}^{(x)}(\lambda)=1\neq0.
-\end{equation}
-Hence $\theta=0$: the one-dimensional half-space has no nontrivial bounded mode with $|\lambda|>1$.
 \section{External Excitation}
 
 External field excitations are prescribed by user-defined grid functions of space and time, together with a spatial flag that selects the excitation type at each Yee edge (or face). Following the Artemis convention,
