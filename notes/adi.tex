@@ -724,23 +724,23 @@ In the AMReX Yee grid, with vacuum media, the field updates are implemented as
 \begin{subequations}\label{eq:adi-second-half-amrex}
     \begin{align}
         \begin{split}
-            - E_x^{n+1}(i, j, k - 1) + \left(2+\frac{4\Delta z^2}{c^2\Delta t^2}\right) E_x^{n+1}(i, j, k) & - E_x^{n+1}(i, j, k + 1) = \frac{4\Delta z^2}{c^2\Delta t^2} E_x^{n+\frac12}(i, j, k)                                                                        \\
-                                                                                                            & + \frac{2\Delta z^2}{\Delta t}\left[\frac{B_z^{n+\frac12}(i, j, k)-B_z^{n+\frac12}(i, j - 1, k)}{\Delta y} - \frac{B_y^{n+\frac12}(i, j, k)-B_y^{n+\frac12}(i, j, k - 1)}{\Delta z}\right] \\
-                                                                                                            & + \Delta z\left[\frac{E_z^{n+\frac12}(i + 1, j, k - 1)-E_z^{n+\frac12}(i, j, k - 1)}{\Delta x} - \frac{E_z^{n+\frac12}(i + 1, j, k)-E_z^{n+\frac12}(i, j, k)}{\Delta x}\right],            \\
+            - E_x^{n+1}(i, j, k - 1) + \left(2+\frac{4\Delta z^2}{c^2\Delta t^2}\right) E_x^{n+1}(i, j, k) & - E_x^{n+1}(i, j, k + 1) = \frac{4\Delta z^2}{c^2\Delta t^2} E_x^{n+\frac12}(i, j, k)                                                                                                      \\
+                                                                                                           & + \frac{2\Delta z^2}{\Delta t}\left[\frac{B_z^{n+\frac12}(i, j, k)-B_z^{n+\frac12}(i, j - 1, k)}{\Delta y} - \frac{B_y^{n+\frac12}(i, j, k)-B_y^{n+\frac12}(i, j, k - 1)}{\Delta z}\right] \\
+                                                                                                           & + \Delta z\left[\frac{E_z^{n+\frac12}(i + 1, j, k - 1)-E_z^{n+\frac12}(i, j, k - 1)}{\Delta x} - \frac{E_z^{n+\frac12}(i + 1, j, k)-E_z^{n+\frac12}(i, j, k)}{\Delta x}\right],            \\
         \end{split}
     \end{align}
     \begin{align}
         \begin{split}
-            - E_y^{n+1}(i - 1, j, k) + \left(2+\frac{4\Delta x^2}{c^2\Delta t^2}\right) E_y^{n+1}(i, j, k) & - E_y^{n+1}(i + 1, j, k) = \frac{4\Delta x^2}{c^2\Delta t^2} E_y^{n+\frac12}(i, j, k)                                                                        \\
-                                                                                                            & + \frac{2\Delta x^2}{\Delta t}\left[\frac{B_x^{n+\frac12}(i, j, k)-B_x^{n+\frac12}(i, j, k - 1)}{\Delta z} - \frac{B_z^{n+\frac12}(i, j, k)-B_z^{n+\frac12}(i - 1, j, k)}{\Delta x}\right] \\
-                                                                                                            & + \Delta x\left[\frac{E_x^{n+\frac12}(i - 1, j + 1, k)-E_x^{n+\frac12}(i - 1, j, k)}{\Delta y} - \frac{E_x^{n+\frac12}(i, j + 1, k)-E_x^{n+\frac12}(i, j, k)}{\Delta y}\right],            \\
+            - E_y^{n+1}(i - 1, j, k) + \left(2+\frac{4\Delta x^2}{c^2\Delta t^2}\right) E_y^{n+1}(i, j, k) & - E_y^{n+1}(i + 1, j, k) = \frac{4\Delta x^2}{c^2\Delta t^2} E_y^{n+\frac12}(i, j, k)                                                                                                      \\
+                                                                                                           & + \frac{2\Delta x^2}{\Delta t}\left[\frac{B_x^{n+\frac12}(i, j, k)-B_x^{n+\frac12}(i, j, k - 1)}{\Delta z} - \frac{B_z^{n+\frac12}(i, j, k)-B_z^{n+\frac12}(i - 1, j, k)}{\Delta x}\right] \\
+                                                                                                           & + \Delta x\left[\frac{E_x^{n+\frac12}(i - 1, j + 1, k)-E_x^{n+\frac12}(i - 1, j, k)}{\Delta y} - \frac{E_x^{n+\frac12}(i, j + 1, k)-E_x^{n+\frac12}(i, j, k)}{\Delta y}\right],            \\
         \end{split}
     \end{align}
     \begin{align}
         \begin{split}
-            - E_z^{n+1}(i, j - 1, k) + \left(2+\frac{4\Delta y^2}{c^2\Delta t^2}\right) E_z^{n+1}(i, j, k) & - E_z^{n+1}(i, j + 1, k) = \frac{4\Delta y^2}{c^2\Delta t^2} E_z^{n+\frac12}(i, j, k)                                                                        \\
-                                                                                                            & + \frac{2\Delta y^2}{\Delta t}\left[\frac{B_y^{n+\frac12}(i, j, k)-B_y^{n+\frac12}(i - 1, j, k)}{\Delta x} - \frac{B_x^{n+\frac12}(i, j, k)-B_x^{n+\frac12}(i, j - 1, k)}{\Delta y}\right] \\
-                                                                                                            & + \Delta y\left[\frac{E_y^{n+\frac12}(i, j - 1, k + 1)-E_y^{n+\frac12}(i, j - 1, k)}{\Delta z} - \frac{E_y^{n+\frac12}(i, j, k + 1)-E_y^{n+\frac12}(i, j, k)}{\Delta z}\right],            \\
+            - E_z^{n+1}(i, j - 1, k) + \left(2+\frac{4\Delta y^2}{c^2\Delta t^2}\right) E_z^{n+1}(i, j, k) & - E_z^{n+1}(i, j + 1, k) = \frac{4\Delta y^2}{c^2\Delta t^2} E_z^{n+\frac12}(i, j, k)                                                                                                      \\
+                                                                                                           & + \frac{2\Delta y^2}{\Delta t}\left[\frac{B_y^{n+\frac12}(i, j, k)-B_y^{n+\frac12}(i - 1, j, k)}{\Delta x} - \frac{B_x^{n+\frac12}(i, j, k)-B_x^{n+\frac12}(i, j - 1, k)}{\Delta y}\right] \\
+                                                                                                           & + \Delta y\left[\frac{E_y^{n+\frac12}(i, j - 1, k + 1)-E_y^{n+\frac12}(i, j - 1, k)}{\Delta z} - \frac{E_y^{n+\frac12}(i, j, k + 1)-E_y^{n+\frac12}(i, j, k)}{\Delta z}\right],            \\
         \end{split}
     \end{align}
     \begin{align}
@@ -833,8 +833,8 @@ Note that we do not need to explicitly impose $\hat{\mathbf{n}} \cdot \mathbf{B}
     B_x^{n+1}(i_b,j,k)
     = B_x^n(i_b,j,k)
     + \frac{\Delta t}{2}\left[
-        \frac{E_y^{n+\frac12}(i_b,j,k+1)-E_y^{n+\frac12}(i_b,j,k)}{\Delta z}
-        - \frac{E_z^{n+1}(i_b,j+1,k)-E_z^{n+1}(i_b,j,k)}{\Delta y}
+    \frac{E_y^{n+\frac12}(i_b,j,k+1)-E_y^{n+\frac12}(i_b,j,k)}{\Delta z}
+    - \frac{E_z^{n+1}(i_b,j+1,k)-E_z^{n+1}(i_b,j,k)}{\Delta y}
     \right].
 \end{equation}
 Since the PEC condition gives
@@ -880,14 +880,17 @@ Define the coefficient $\gamma$ by
 \end{equation}
 
 Define the two staggered first-difference operators by
-\begin{align}
-    \left(\delta_x^{E}E_z\right)_{i+\tfrac12,j,k+\tfrac12}
-     & :=\frac{E_{z,i+1,j,k+\tfrac12}-E_{z,i,j,k+\tfrac12}}{\Delta x},
-    \label{eq:adi-delta-x-E}                                                           \\
-    \left(\delta_x^{H}H_y\right)_{i,j,k+\tfrac12}
-     & :=\frac{H_{y,i+\tfrac12,j,k+\tfrac12}-H_{y,i-\tfrac12,j,k+\tfrac12}}{\Delta x}.
-    \label{eq:adi-delta-x-H}
-\end{align}
+\begin{subequations}
+    \begin{align}
+        \left(\delta_x^{E}E_z\right)_{i+\tfrac12,j,k+\tfrac12}
+         & :=\frac{E_{z,i+1,j,k+\tfrac12}-E_{z,i,j,k+\tfrac12}}{\Delta x},
+        \label{eq:adi-delta-x-E}                                                           \\
+        \left(\delta_x^{H}H_y\right)_{i,j,k+\tfrac12}
+         & :=\frac{H_{y,i+\tfrac12,j,k+\tfrac12}-H_{y,i-\tfrac12,j,k+\tfrac12}}{\Delta x}.
+        \label{eq:adi-delta-x-H}
+    \end{align}
+    \label{eq:adi-delta-x-operators}
+\end{subequations}
 Thus $\delta_x^{E}$ maps the $E_z$ grid to the $H_y$ grid, while $\delta_x^{H}$ maps the $H_y$ grid to the $E_z$ grid. Their composition is the centered second difference
 \begin{equation}
     \left(\delta_x^2E_z\right)_{i,j,k+\tfrac12}
@@ -896,8 +899,6 @@ Thus $\delta_x^{E}$ maps the $E_z$ grid to the $H_y$ grid, while $\delta_x^{H}$ 
     +E_{z,i+1,j,k+\tfrac12}}{\Delta x^2}.
     \label{eq:adi-delta-x-squared}
 \end{equation}
-
-\subsection{One-dimensional ADI update}
 
 Restricting \eqref{eq:first-e-ez-adi-tridiagonal}--\eqref{eq:adi-first-hy} to this polarization and multiplying the electric equation by $C_b$, the first half-step is
 \begin{equation}
@@ -918,50 +919,39 @@ where $E_z$ is implicit along $x$. In the second half-step, $E_z$ is formally im
     H_y^{n+1}=H_y^{n+\frac12}+D_b\delta_x^{E}E_z^{n+\frac12}.
     \label{eq:adi-second-hy-dispersion}
 \end{equation}
-Both magnetic half-updates use the same intermediate electric field; therefore,
+Combining \eqref{eq:adi-first-hy-dispersion} and \eqref{eq:adi-second-hy-dispersion}, we have
 \begin{equation}
     H_y^{n+1}=H_y^n+2D_b\delta_x^{E}E_z^{n+\frac12}
     \label{eq:adi-dispersion-full-hy}
 \end{equation}
 
-\subsection{Plane-wave ansatz and Yee symbols}
-
 At any time level $m$, write a spatial Fourier mode on the staggered Yee grid as
 \begin{align}
-    E_{z,i,j,k+\tfrac12}^{m} & =\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x}, \\
+    E_{z,i,j,k+\tfrac12}^{m}          & =\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x},            \\
     H_{y,i+\tfrac12,j,k+\tfrac12}^{m} & =\widehat H_y^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}.
     \label{eq:adi-dispersion-spatial-mode}
 \end{align}
-Plugging into \eqref{eq:adi-delta-x-E} gives
-\begin{align}
-    \left(\delta_x^{E}E_z^m\right)_{i+\tfrac12,j,k+\tfrac12} & =\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
-     & =\mathrm{i}K_x\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x},
-\end{align}
+Plugging into \eqref{eq:adi-delta-x-operators} and \eqref{eq:adi-delta-x-squared} gives
+\begin{subequations}
+    \begin{align}
+        \left(\delta_x^{E}E_z^m\right)_{i+\tfrac12,j,k+\tfrac12} & = \mathrm{i}K_x\widehat E_z^{\,m}e^{\mathrm{i}k_x(i+\tfrac12)\Delta x}, \\
+        \left(\delta_x^{H}H_y^m\right)_{i,j,k+\tfrac12}          & = \mathrm{i}K_x\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x},            \\
+        \left(\delta_x^2E_z^m\right)_{i,j,k+\tfrac12}            & =-K_x^2\widehat E_z^{\,m}e^{\mathrm{i}k_xi\Delta x}.
+    \end{align}
+    \label{eq:adi-delta-x-fourier}
+\end{subequations}
 where
 \begin{equation}
     K_x:=\frac{2}{\Delta x}\sin\!\left(\frac{k_x\Delta x}{2}\right).
     \label{eq:adi-Kx}
 \end{equation}
-Similarly, \eqref{eq:adi-delta-x-H} gives
-\begin{align}
-    \left(\delta_x^{H}H_y^m\right)_{i,j,k+\tfrac12} & =\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}\frac{e^{\mathrm{i}k_x\Delta x/2}-e^{-\mathrm{i}k_x\Delta x/2}}{\Delta x} \\
-     & =\mathrm{i}K_x\widehat H_y^{\,m}e^{\mathrm{i}k_xi\Delta x}.
-\end{align}
-Consequently, the Fourier symbols of the explicitly defined operators are
-\begin{equation}
-    \delta_x^{E}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^{H}\longleftrightarrow\mathrm{i}K_x,\qquad \delta_x^2\longleftrightarrow-K_x^2.
-    \label{eq:adi-difference-symbols}
-\end{equation}
-As $\Delta x\to0$, $K_x\to k_x$, so these symbols recover their continuum counterparts.
-
-\subsection{Fourier reduction of the half-steps}
 
 For brevity, define the derivative symbol and implicit denominator
 \begin{equation}
     s:=\mathrm{i}K_x,\qquad D:=1+\gamma K_x^2.
     \label{eq:adi-dispersion-s-D}
 \end{equation}
-Substituting into \eqref{eq:first-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the first-half electric update becomes
+Substituting into \eqref{eq:first-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-delta-x-fourier}, the first-half electric update becomes
 \begin{equation}
     D\widehat E_z^{\,n+\frac12} = \widehat E_z^{\,n}+C_bs\widehat H_y^{\,n}.
     \label{eq:adi-dispersion-half1-E}
@@ -971,7 +961,7 @@ Similarly for \eqref{eq:adi-first-hy-dispersion}, we have
     \widehat H_y^{\,n+\frac12} = \widehat H_y^{\,n}+D_bs\widehat E_z^{\,n+\frac12}.
     \label{eq:adi-dispersion-half1-H}
 \end{equation}
-Substituting into \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-difference-symbols}, the second-half electric update becomes
+Substituting into \eqref{eq:second-e-ez-adi-tridiagonal-dispersion} and using \eqref{eq:adi-delta-x-fourier}, the second-half electric update becomes
 \begin{equation}
     \widehat E_z^{\,n+1} = \widehat E_z^{\,n+\frac12}+C_bs\widehat H_y^{\,n+\frac12},
     \label{eq:adi-dispersion-half2-E}
@@ -982,8 +972,6 @@ Similarly for \eqref{eq:adi-second-hy-dispersion}, we have
     \label{eq:adi-dispersion-full-H}
 \end{equation}
 
-\subsection{Amplification matrix}
-
 Solving \eqref{eq:adi-dispersion-half1-E} for the intermediate electric amplitude gives
 \begin{equation}
     \widehat E_z^{\,n+\frac12}=\frac{1}{D}\widehat E_z^{\,n}+\frac{C_bs}{D}\widehat H_y^{\,n}.
@@ -993,8 +981,6 @@ Substitution into \eqref{eq:adi-dispersion-half2-E} and \eqref{eq:adi-dispersion
     \begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n+1}=G\begin{pmatrix} \widehat E_z \\ \widehat H_y \end{pmatrix}^{n},\qquad G=\frac{1}{D}\begin{pmatrix} 1-\gamma K_x^2 & 2C_b s \\ 2D_b s & 1-\gamma K_x^2 \end{pmatrix}.
     \label{eq:adi-amplification-matrix}
 \end{equation}
-
-\subsection{Numerical dispersion relation}
 
 A time-harmonic mode satisfies
 \begin{equation}
@@ -1080,7 +1066,7 @@ The measured FFT peak was divided by $f_0$. For this fixed spatial mode the norm
 \end{equation}
 
 
-Figure~\ref{fig:adi-phase-velocity-standing} compares the measured frequencies with the analytic dispersion relation and shows the corresponding time histories and spectra. Both the periodic traveling-wave case and the PEC standing-wave case show good agreement with the analytical frequency shift, verifying the ADI dispersion relation. The agreement of both initial-value problems also indicates that the PEC boundary does not introduce observable additional error. 
+Figure~\ref{fig:adi-phase-velocity-standing} compares the measured frequencies with the analytic dispersion relation and shows the corresponding time histories and spectra. Both the periodic traveling-wave case and the PEC standing-wave case show good agreement with the analytical frequency shift, verifying the ADI dispersion relation. The agreement of both initial-value problems also indicates that the PEC boundary does not introduce observable additional error.
 
 \paragraph{Soft excitation verification}
 
@@ -1114,25 +1100,6 @@ where $E_0=1$, $f_0=c/L_z$, and $T_P=1/f_0$. Thus the source has the spatial pro
 
 The electric field was sampled at the mode antinode $z=L_z/4$ at approximately sixteen samples per period. As in the initial-value tests, the dominant frequency was extracted from the last half of the sixteen-period signal using a Hann-windowed, zero-padded Fourier transform. The measured frequencies were compared with \eqref{eq:adi-dispersion-relation} for $S=64$, $128$, $256$, and $512$. A periodic traveling-wave initial-value problem on the same grid provided a reference.
 
-Figure~\ref{fig:adi-phase-velocity-soft} compares the measured frequencies with the analytic dispersion relation and shows the corresponding time histories and spectra. Both the periodic traveling-wave case and the PEC soft-excitation case show good agreement with the analytical frequency shift. However, the soft-excitation case shows a larger amplitude difference as the CFL number increases.
-
-Indeed, Figure~\ref{fig:adi-amplitude-soft-vs-standing} shows that although the two cases have almost the same frequency behavior, the standing-wave peak amplitude remains nearly constant, whereas the soft-excitation peak decreases significantly as the CFL number increases.
-
-\begin{figure}[htpb]
-    \centering
-    \includegraphics[width=\linewidth]{png_out/pec_soft_vs_standing_cfl.png}
-    \caption{Comparison of the amplitude of the PEC soft-excitation and PEC standing-wave cases with respect to the CFL number.}
-    \label{fig:adi-amplitude-soft-vs-standing}
-\end{figure}
-
-To determine the origin of this amplitude variation, the response was measured over a range of CFL numbers for several excitation frequencies, as is shown in Figure~\ref{fig:adi-frequency-soft-vs-standing}. Noticeably, the response frequency is independent of the excitation frequency, while the amplitude is not. However, the amplitude does not always decrease with increasing CFL number, it also increases for some excitation frequencies. Generally, when excitation frequency is smaller than the true response frequency, the amplitude increases with increasing CFL number, and when excitation frequency is larger than the true response frequency, the amplitude decreases with increasing CFL number.
-
-\begin{figure}[htpb]
-    \centering
-    \includegraphics[width=\linewidth]{png_out/pec_soft_drive_freq_vs_cfl.png}
-    \caption{Comparison of the frequency of the PEC soft-excitation and PEC standing-wave cases with respect to the CFL number for different excitation frequencies.}
-    \label{fig:adi-frequency-soft-vs-standing}
-\end{figure}
 
 \paragraph{The origin of the amplitude variation}
 After the finite-duration source has vanished, the cavity oscillates at its intrinsic numerical frequency $\omega_{\mathrm{ADI}}(S)$. The experiments show that $\omega_{\mathrm{ADI}}(S)$ is independent of the excitation frequency $\omega_d$. The residual amplitude, however, is determined by the spectral overlap of the source pulse with this cavity mode. For the Gaussian-modulated sinusoidal source used here, the positive-frequency contribution is approximately
@@ -1141,7 +1108,7 @@ After the finite-duration source has vanished, the cavity oscillates at its intr
     \exp\!\left[
         -\frac{T_P^2}{2}
         \bigl(\omega_{\mathrm{ADI}}(S)-\omega_d\bigr)^2
-    \right].
+        \right].
 \end{equation}
 
 Besides this detuning effect, the finite temporal sampling of the soft source changes the amount of drive injected into the cavity. The carrier is sampled once per time step with spacing $\Delta t=S\Delta z/c$. Representing each sampled value over one time-step interval gives the discrete-injection factor
@@ -1157,7 +1124,7 @@ This factor is separate from the ADI dispersion relation: it describes the loss 
         \exp\!\left[
             -\frac{T_P^2}{2}
             \bigl(\omega_{\mathrm{ADI}}(S)-\omega_d\bigr)^2
-        \right]
+            \right]
     }_{\text{drive--mode detuning}}
     \underbrace{
         \operatorname{sinc}\!\left(\frac{\omega_d\Delta t}{2}\right)
@@ -1406,7 +1373,7 @@ where
     q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                              \\
     r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
 \end{align}
-The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_{b,i+\tfrac12,j,k}^{L}$ and $C_{a,i+\tfrac12,j,k}^{L}$. The $E_y$ and $E_z$ first-half systems are modified in the same way. 
+The off-diagonal coefficients $\alpha_{x1}$ and $\gamma_{x1}$ are unchanged (they come only from the implicit curl of $H$). The diagonal $\beta_{x1}^{L}$ and the factor $p_{x1}^{L}$ feel $L_x$ through $C_{b,i+\tfrac12,j,k}^{L}$ and $C_{a,i+\tfrac12,j,k}^{L}$. The $E_y$ and $E_z$ first-half systems are modified in the same way.
 
 The current update is
 \begin{equation}
