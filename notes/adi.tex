@@ -1198,7 +1198,7 @@ Consequently a hard electric source (flag $=1$), which would require constrainin
 
 \subsection{Magnetic Sources After Each Half-Step}
 
-After the first ADI half-step has produced $\mathbf{E}^{n+\frac12}$ and $\mathbf{B}^{n+\frac12}$, and again after the second half-step has produced $\mathbf{E}^{n+1}$ and $\mathbf{B}^{n+1}$, an external magnetic excitation is applied directly to the magnetic field. The excitation is evaluated at the arrival level of the field being modified. Thus, after the first half-step, a soft magnetic source (flag $=2$) contributes
+After the first ADI half-step has produced $\mathbf{E}^{n+\frac12}$ and $\mathbf{B}^{n+\frac12}$, and again after the second half-step has produced $\mathbf{E}^{n+1}$ and $\mathbf{B}^{n+1}$, an external magnetic excitation is applied directly to the magnetic field. Both contributions use the same source sample evaluated at the common midpoint $n+\tfrac12$. Thus, after the first half-step, a soft magnetic source (flag $=2$) contributes
 \begin{equation}
     B_{x,i,j+\tfrac12,k+\tfrac12}
     \;\leftarrow\;
@@ -1211,7 +1211,7 @@ while a hard magnetic source (flag $=1$) overwrites
     \;\leftarrow\;
     S_{B_x,i,j+\tfrac12,k+\tfrac12}^{n+\frac12}.
 \end{equation}
-After the second half-step the corresponding source values are $S_{B_x}^{n+1}$: a soft source adds $\tfrac12 S_{B_x}^{n+1}$, while a hard source overwrites the field with $S_{B_x}^{n+1}$. (The factor $\tfrac12$ again splits a full-step soft increment across the two half-steps.) The same rules apply to $B_y$ and $B_z$ at their staggered faces. Unlike the electric soft source, this magnetic update is an explicit post-processing of the field after the ADI magnetic stage; it does not enter the tridiagonal electric systems.
+After the second half-step the same midpoint source value $S_{B_x}^{n+\frac12}$ is used: a soft source adds $\tfrac12 S_{B_x}^{n+\frac12}$, while a hard source overwrites the field with $S_{B_x}^{n+\frac12}$. (The factor $\tfrac12$ again splits a full-step soft increment across the two half-steps.) The same rules apply to $B_y$ and $B_z$ at their staggered faces. Unlike the electric soft source, this magnetic update is an explicit post-processing of the field after the ADI magnetic stage; it does not enter the tridiagonal electric systems.
 
 \subsection{Summary of the ADI Excitation Path}
 
@@ -1221,7 +1221,7 @@ Over one full step $\Delta t$, the macroscopic ADI scheme therefore proceeds as 
     \item Update $\mathbf{B}$ to $n+\tfrac12$ from the ADI magnetic formulae.
     \item Apply magnetic excitation to $\mathbf{B}^{n+\frac12}$ (soft: add $\tfrac12 S_B^{n+\frac12}$; hard: set equal to $S_B^{n+\frac12}$).
     \item Form and solve the second-half electric systems using the same midpoint soft electric sources $S_E^{n+\frac12}$.
-    \item Update $\mathbf{B}$ to $n+1$, then apply magnetic excitation evaluated at $n+1$.
+    \item Update $\mathbf{B}$ to $n+1$, then apply magnetic excitation evaluated at the same midpoint $n+\tfrac12$.
 \end{enumerate}
 Hard electric sources are not part of this path. Soft electric sources never overwrite $E$; they only augment the Amp\`ere right-hand side of each half-step, consistently with the half-step coefficients $C_a$ and $C_b$ of \eqref{eq:adi-half-coefficients}.
 
