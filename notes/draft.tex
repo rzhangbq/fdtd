@@ -1,0 +1,294 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\usepackage[margin=1cm, bottom=2cm]{geometry}
+
+% \input{structure.tex} % Include the file specifying the document structure and custom commands
+
+% \usepackage{indentfirst}\setlength{\parindent}{0em}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{amsmath,amsfonts,stmaryrd,amssymb} % Math packages
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz}
+
+% add linking w/ blue color
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+
+\numberwithin{figure}{section}
+
+\title{Draft}
+
+\begin{document}
+
+\maketitle
+\section{Source term analysis}
+\subsection{Electric field source terms}
+
+Use the conventions \(\delta_x^{E,2}=\delta_x^H\delta_x^E\) and \(\delta_x^{H,2}=\delta_x^E\delta_x^H\).
+Let $S_{E,1}^n$ be the electric field source term in between $n$ and $n+\frac{1}{2}$, and $S_{E,2}^n$ be that in between $n+\frac{1}{2}$ and $n+1$.
+\begin{equation}
+    \left(1-\gamma\delta_x^{E,2}\right)E_z^{n+\frac{1}{2}} = E_z^n+C_b\delta_x^H H_y^n+S_{E,1}^n \label{eq:implicit-electric-half-step}
+\end{equation}
+\begin{equation}
+    H_y^{n+\frac{1}{2}} = H_y^n+D_b\delta_x^E E_z^{n+\frac{1}{2}} \label{eq:magnetic-half-step}
+\end{equation}
+\begin{equation}
+    E_z^{n+1} = E_z^{n+\frac{1}{2}} + C_b\delta_x^H H_y^{n+\frac{1}{2}}+S_{E,2}^n \label{eq:electric-full-step}
+\end{equation}
+\begin{equation}
+    H_y^{n+1} = H_y^{n+\frac{1}{2}} + D_b\delta_x^E E_z^{n+\frac{1}{2}} \label{eq:magnetic-full-step}
+\end{equation}
+Shifting back equations~\eqref{eq:electric-full-step} and \eqref{eq:magnetic-full-step} one full step gives
+\begin{equation}
+    E_z^n = E_z^{n-\frac{1}{2}} + C_b\delta_x^H H_y^{n-\frac{1}{2}}+S_{E,2}^{n-1} \label{eq:shifted-electric-step}
+\end{equation}
+\begin{equation}
+    H_y^n = H_y^{n-\frac{1}{2}} + D_b\delta_x^E E_z^{n-\frac{1}{2}} \label{eq:shifted-magnetic-step}
+\end{equation}
+To eliminate \(H_y\) from equations~\eqref{eq:implicit-electric-half-step}--\eqref{eq:electric-full-step}, substitute equation~\eqref{eq:magnetic-half-step} into equation~\eqref{eq:electric-full-step}:
+\begin{equation}
+    E_z^{n+1} = E_z^{n+\frac{1}{2}} + C_b\delta_x^H H_y^n + \gamma\delta_x^{E,2} E_z^{n+\frac{1}{2}}+S_{E,2}^n. \label{eq:e-after-h-substitution}
+\end{equation}
+Equation~\eqref{eq:implicit-electric-half-step} gives
+\begin{equation}
+    C_b\delta_x^H H_y^n = \left(1-\gamma\delta_x^{E,2}\right)E_z^{n+\frac{1}{2}}-E_z^n-S_{E,1}^n. \label{eq:h-elimination-identity}
+\end{equation}
+Using \(\gamma\delta_x^{E,2}=C_bD_b\delta_x^H\delta_x^E\), equations~\eqref{eq:e-after-h-substitution} and \eqref{eq:h-elimination-identity} reduce to
+\begin{equation}
+    E_z^{n+\frac{1}{2}} = \frac{1}{2}\left(E_z^{n+1}+E_z^n+S_{E,1}^n-S_{E,2}^n\right). \label{eq:e-only-first-half}
+\end{equation}
+Shifting back one full step gives
+\begin{equation}
+    E_z^{n-\frac{1}{2}} = \frac{1}{2}\left(E_z^n+E_z^{n-1}+S_{E,1}^{n-1}-S_{E,2}^{n-1}\right). \label{eq:e-only-first-half-shifted}
+\end{equation}
+Next, eliminate \(H_y\) using equations~\eqref{eq:implicit-electric-half-step}, \eqref{eq:shifted-electric-step}, and \eqref{eq:shifted-magnetic-step}. Applying \(C_b\delta_x^H\) to both sides of equation~\eqref{eq:shifted-magnetic-step} gives
+\begin{equation}
+    C_b\delta_x^H H_y^n = C_b\delta_x^H H_y^{n-\frac{1}{2}}+\gamma\delta_x^{E,2}E_z^{n-\frac{1}{2}}. \label{eq:h-substitution-shifted}
+\end{equation}
+Eliminate $C_b\delta_x^H H_y^{n-\frac{1}{2}}$ by equation~\eqref{eq:shifted-electric-step} gives
+\begin{equation}
+    C_b\delta_x^H H_y^n=E_z^n-\left(1-\gamma\delta_x^{E,2}\right)E_z^{n-\frac{1}{2}}-S_{E,2}^{n-1}. \label{eq:h-elimination-identity-shifted}
+\end{equation}
+Substituting into equation~\eqref{eq:implicit-electric-half-step} to eliminate \(H_y\):
+\begin{equation}
+    \left(1-\gamma\delta_x^{E,2}\right)\left(E_z^{n+\frac{1}{2}}+E_z^{n-\frac{1}{2}}\right) = 2E_z^n+S_{E,1}^n-S_{E,2}^{n-1}. \label{eq:e-only-centered}
+\end{equation}
+Finally, substitute equations~\eqref{eq:e-only-first-half} and \eqref{eq:e-only-first-half-shifted} into equation~\eqref{eq:e-only-centered} to eliminate the half-step values of \(E_z\):
+\begin{equation}
+    \left(1-\gamma\delta_x^{E,2}\right)E_z^{n+1} = 2\left(1+\gamma\delta_x^{E,2}\right)E_z^n-\left(1-\gamma\delta_x^{E,2}\right)E_z^{n-1}+\left(1+\gamma\delta_x^{E,2}\right)S_{E,1}^n-\left(1-\gamma\delta_x^{E,2}\right)S_{E,1}^{n-1}+\left(1-\gamma\delta_x^{E,2}\right)S_{E,2}^n-\left(1+\gamma\delta_x^{E,2}\right)S_{E,2}^{n-1}. \label{eq:e-only-full-step}
+\end{equation}
+Recall that \(\gamma=C_bD_b=c^2\Delta t^2/4\), then equation~\eqref{eq:e-only-full-step} results in,
+\begin{align}
+    \begin{split}
+         & \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=                                                                                                                                                                                                                                                                                     \\
+         & c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{1}{\Delta t^2}\left[\left(1+\gamma\delta_x^{E,2}\right)S_{E,1}^n-\left(1-\gamma\delta_x^{E,2}\right)S_{E,1}^{n-1}+\left(1-\gamma\delta_x^{E,2}\right)S_{E,2}^n-\left(1+\gamma\delta_x^{E,2}\right)S_{E,2}^{n-1}\right]. \label{eq:discrete-wave-equation}
+    \end{split}
+\end{align}
+
+Suppose the same source is applied in both substeps, with \(S_{E,1}^n=S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{1}{2}}\) and \(S_{E,1}^{n-1}=S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
+\begin{equation}
+    \frac{\Delta t}{2}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]=\Delta t\left(S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}\right). \label{eq:symmetric-source-reduction}
+\end{equation}
+Therefore equation~\eqref{eq:discrete-wave-equation} becomes
+\begin{equation}
+    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-symmetric-source}
+\end{equation}
+Assume \(S^{n+a}=S(t_n+a\Delta t)\) and \(F^n=S_t(t_n)\). The source approximation in equation~\eqref{eq:wave-equation-symmetric-source} has the Taylor expansion
+\begin{equation}
+    \frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}=F^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^4), \qquad \mathrm{error}=\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^4). \label{eq:symmetric-source-error}
+\end{equation}
+Thus the midpoint-source case is second-order accurate for \(F^n=S_t(t_n)\).
+
+Alternatively, suppose the first source is evaluated at the first quarter-step and the second source at the third quarter-step:
+\(S_{E,1}^n=\frac{\Delta t}{2}S^{n+\frac{1}{4}}\), \(S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{3}{4}}\), \(S_{E,1}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{3}{4}}\), and \(S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{4}}\). Then equation~\eqref{eq:discrete-wave-equation} becomes
+\begin{equation}
+    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{1}{2\Delta t}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{4}}\right]. \label{eq:wave-equation-quarter-step-source}
+\end{equation}
+The source approximation in equation~\eqref{eq:wave-equation-quarter-step-source} has the Taylor expansion
+\begin{equation}
+    F^n-\frac{\gamma}{2}\delta_x^{E,2}F^n+\frac{7\Delta t^2}{96}S_{ttt}^n+O(\Delta t^4), \qquad \mathrm{error}=-\frac{\gamma}{2}\delta_x^{E,2}F^n+\frac{7\Delta t^2}{96}S_{ttt}^n+O(\Delta t^4). \label{eq:quarter-step-source-error}
+\end{equation}
+Since \(\gamma=O(\Delta t^2)\), the quarter-step source case is also second-order accurate.
+
+Assume \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{E,2}e^{ikx}=\lambda_xe^{ikx}\), and \(q=-\gamma\lambda_x\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-symmetric-source} gives
+\begin{equation}
+    \begin{aligned} F_{\mathrm{mid}}^n & =\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}                                      \\
+                                   & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
+                                   & =\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(kx+\omega t_n)},
+    \end{aligned} \label{eq:midpoint-source-amplitude}
+\end{equation}
+so \(\widehat{F}_{\mathrm{mid}}=\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)\).
+Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-quarter-step-source} gives
+\begin{equation}
+    \begin{aligned} F_{\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{4}}\right] \\
+                                       & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{2\Delta t}\left[\left(1-q\right)e^{i\theta/4}-\left(1+q\right)e^{-3i\theta/4}+\left(1+q\right)e^{3i\theta/4}-\left(1-q\right)e^{-i\theta/4}\right]                                                           \\
+                                       & =\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]e^{i(kx+\omega t_n)}.
+    \end{aligned} \label{eq:quarter-source-amplitude}
+\end{equation}
+so \(\widehat{F}_{\mathrm{quarter}}=\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]\).
+Therefore the magnitude ratio between the quarter-step and midpoint-source terms is
+\begin{equation}
+    \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\left|\cos\left(\frac{\theta}{4}\right)+\frac{q\cos\left(\frac{\theta}{2}\right)}{2\cos\left(\frac{\theta}{4}\right)}\right|. \label{eq:source-magnitude-ratio}
+\end{equation}
+For a spatially uniform source, \(q=0\), so the quarter-step magnitude is smaller by the factor
+\begin{equation}
+    \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\left|\cos\left(\frac{\omega\Delta t}{4}\right)\right|. \label{eq:uniform-source-magnitude-ratio}
+\end{equation}
+
+\subsection{Magnetic field source terms}
+Let $S_{H,1}^n$ be the magnetic field source term in between $n$ and $n+\frac{1}{2}$, and $S_{H,2}^n$ be that in between $n+\frac{1}{2}$ and $n+1$.
+\begin{equation}
+    \left(1-\gamma\delta_x^{E,2}\right)E_z^{n+\frac{1}{2}}=E_z^n+C_b\delta_x^H H_y^n. \label{eq:hsource-implicit-electric-half-step}
+\end{equation}
+\begin{equation}
+    H_y^{n+\frac{1}{2}}=H_y^n+D_b\delta_x^E E_z^{n+\frac{1}{2}}+S_{H,1}^n. \label{eq:hsource-magnetic-half-step}
+\end{equation}
+\begin{equation}
+    E_z^{n+1}=E_z^{n+\frac{1}{2}}+C_b\delta_x^H H_y^{n+\frac{1}{2}}. \label{eq:hsource-electric-full-step}
+\end{equation}
+\begin{equation}
+    H_y^{n+1}=H_y^{n+\frac{1}{2}}+D_b\delta_x^E E_z^{n+\frac{1}{2}}+S_{H,2}^n. \label{eq:hsource-magnetic-full-step}
+\end{equation}
+Shifting back equations~\eqref{eq:hsource-electric-full-step} and \eqref{eq:hsource-magnetic-full-step} one full step gives
+\begin{equation}
+    E_z^n=E_z^{n-\frac{1}{2}}+C_b\delta_x^H H_y^{n-\frac{1}{2}}. \label{eq:hsource-shifted-electric-step}
+\end{equation}
+\begin{equation}
+    H_y^n=H_y^{n-\frac{1}{2}}+D_b\delta_x^E E_z^{n-\frac{1}{2}}+S_{H,2}^{n-1}. \label{eq:hsource-shifted-magnetic-step}
+\end{equation}
+To eliminate \(E_z\) from equations~\eqref{eq:hsource-magnetic-half-step}--\eqref{eq:hsource-magnetic-full-step}, equation~\eqref{eq:hsource-magnetic-half-step} gives
+\begin{equation}
+    D_b\delta_x^E E_z^{n+\frac{1}{2}}=H_y^{n+\frac{1}{2}}-H_y^n-S_{H,1}^n. \label{eq:hsource-e-elimination-identity}
+\end{equation}
+Substituting into equation~\eqref{eq:hsource-magnetic-full-step} gives
+\begin{equation}
+    H_y^{n+1}=2H_y^{n+\frac{1}{2}}-H_y^n-S_{H,1}^n+S_{H,2}^n. \label{eq:hsource-h-after-e-substitution}
+\end{equation}
+Solving for the half-step value gives
+\begin{equation}
+    H_y^{n+\frac{1}{2}}=\frac{1}{2}\left(H_y^{n+1}+H_y^n+S_{H,1}^n-S_{H,2}^n\right). \label{eq:hsource-h-only-first-half}
+\end{equation}
+Shifting back one full step gives
+\begin{equation}
+    H_y^{n-\frac{1}{2}}=\frac{1}{2}\left(H_y^n+H_y^{n-1}+S_{H,1}^{n-1}-S_{H,2}^{n-1}\right). \label{eq:hsource-h-only-first-half-shifted}
+\end{equation}
+Next, eliminate \(E_z\) using equations~\eqref{eq:hsource-implicit-electric-half-step}, \eqref{eq:hsource-magnetic-half-step}, \eqref{eq:hsource-shifted-electric-step}, and \eqref{eq:hsource-shifted-magnetic-step}. Applying \(D_b\delta_x^E\) to both sides of equation~\eqref{eq:hsource-shifted-electric-step} gives
+\begin{equation}
+    D_b\delta_x^E E_z^n=D_b\delta_x^E E_z^{n-\frac{1}{2}}+\gamma\delta_x^{H,2}H_y^{n-\frac{1}{2}}. \label{eq:hsource-e-substitution-shifted}
+\end{equation}
+Eliminate \(D_b\delta_x^E E_z^{n-\frac{1}{2}}\) by equation~\eqref{eq:hsource-shifted-magnetic-step} gives
+\begin{equation}
+    D_b\delta_x^E E_z^n=H_y^n-\left(1-\gamma\delta_x^{H,2}\right)H_y^{n-\frac{1}{2}}-S_{H,2}^{n-1}. \label{eq:hsource-e-elimination-identity-shifted}
+\end{equation}
+
+
+
+
+Applying \(D_b\delta_x^E\) to both sides of equation~\eqref{eq:hsource-implicit-electric-half-step} gives
+\begin{equation}
+    \left(1-\gamma\delta_x^{H,2}\right)D_b\delta_x^E E_z^{n+\frac{1}{2}}=D_b\delta_x^E E_z^n+\gamma\delta_x^{H,2}H_y^n. \label{eq:hsource-applied-implicit-electric-step}
+\end{equation}
+Eliminate \(D_b\delta_x^E E_z^{n+\frac{1}{2}}\) by equation~\eqref{eq:hsource-magnetic-half-step} gives
+\begin{equation}
+    D_b\delta_x^E E_z^n=\left(1-\gamma\delta_x^{H,2}\right)H_y^{n+\frac{1}{2}}-H_y^n-\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^n. \label{eq:hsource-e-n-elimination-identity}
+\end{equation}
+Equating equations~\eqref{eq:hsource-e-n-elimination-identity} and \eqref{eq:hsource-e-elimination-identity-shifted} eliminates \(E_z^n\):
+\begin{equation}
+    \left(1-\gamma\delta_x^{H,2}\right)\left(H_y^{n+\frac{1}{2}}+H_y^{n-\frac{1}{2}}\right)=2H_y^n+\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^n-S_{H,2}^{n-1}. \label{eq:hsource-h-only-centered}
+\end{equation}
+
+
+Finally, substitute equations~\eqref{eq:hsource-h-only-first-half} and \eqref{eq:hsource-h-only-first-half-shifted} into equation~\eqref{eq:hsource-h-only-centered} to eliminate the half-step values of \(H_y\):
+\begin{equation}
+    \left(1-\gamma\delta_x^{H,2}\right)H_y^{n+1}=2\left(1+\gamma\delta_x^{H,2}\right)H_y^n-\left(1-\gamma\delta_x^{H,2}\right)H_y^{n-1}+\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^n-\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^{n-1}+\left(1-\gamma\delta_x^{H,2}\right)S_{H,2}^n-\left(1+\gamma\delta_x^{H,2}\right)S_{H,2}^{n-1}. \label{eq:hsource-h-only-full-step}
+\end{equation}
+Recall that \(\gamma=C_bD_b=c^2\Delta t^2/4\), then equation~\eqref{eq:hsource-h-only-full-step} results in,
+\begin{align}
+    \begin{split}
+         & \frac{H_y^{n+1}-2H_y^n+H_y^{n-1}}{\Delta t^2}=                                                                                                                                                                                                                                                                                             \\
+         & c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\frac{1}{\Delta t^2}\left[\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^n-\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^{n-1}+\left(1-\gamma\delta_x^{H,2}\right)S_{H,2}^n-\left(1+\gamma\delta_x^{H,2}\right)S_{H,2}^{n-1}\right]. \label{eq:hsource-discrete-wave-equation}
+    \end{split}
+\end{align}
+Suppose the same source is applied in both substeps, with \(S_{H,1}^n=S_{H,2}^n=\frac{\Delta t}{2}S_H^{n+\frac{1}{2}}\) and \(S_{H,1}^{n-1}=S_{H,2}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:hsource-discrete-wave-equation} reduce to
+\begin{equation}
+    \frac{\Delta t}{2}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{2}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{2}}\right]=\Delta t\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}\right]. \label{eq:hsource-symmetric-source-reduction}
+\end{equation}
+Therefore equation~\eqref{eq:hsource-discrete-wave-equation} becomes
+\begin{equation}
+    \frac{H_y^{n+1}-2H_y^n+H_y^{n-1}}{\Delta t^2}=c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t}. \label{eq:hsource-wave-equation-symmetric-source}
+\end{equation}
+
+Assume \(S_H^{n+a}=S_H(t_n+a\Delta t)\) and \(F_H^n=(S_H)_t(t_n)\). The source approximation in equation~\eqref{eq:hsource-wave-equation-symmetric-source} has the Taylor expansion
+\begin{equation}
+    F_H^n-\frac{\gamma}{\Delta t}\delta_x^{H,2}S_H^n-\frac{\gamma}{2}\delta_x^{H,2}F_H^n+\frac{\Delta t^2}{24}(S_H)_{ttt}^n+O(\Delta t^3). \label{eq:hsource-symmetric-source-error}
+\end{equation}
+Since \(\gamma=O(\Delta t^2)\), the term \(-\gamma\delta_x^{H,2}S_H^n/\Delta t\) is \(O(\Delta t)\). Thus this midpoint-source case is first-order accurate for a spatially varying \(S_H\), but remains second-order when \(\delta_x^{H,2}S_H=0\).
+
+Alternatively, suppose the first source is evaluated at the first quarter-step and the second source at the third quarter-step:
+\(S_{H,1}^n=\frac{\Delta t}{2}S_H^{n+\frac{1}{4}}\), \(S_{H,2}^n=\frac{\Delta t}{2}S_H^{n+\frac{3}{4}}\), \(S_{H,1}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{3}{4}}\), and \(S_{H,2}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{1}{4}}\). Then equation~\eqref{eq:hsource-discrete-wave-equation} becomes
+\begin{align}
+    \begin{split}
+         & \frac{H_y^{n+1}-2H_y^n+H_y^{n-1}}{\Delta t^2}= \\
+         & c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\frac{1}{2\Delta t}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{4}}\right]. \label{eq:hsource-wave-equation-quarter-step-source}
+    \end{split}
+\end{align}
+The source approximation in equation~\eqref{eq:hsource-wave-equation-quarter-step-source} has the Taylor expansion
+\begin{equation}
+    F_H^n-\frac{\gamma}{\Delta t}\delta_x^{H,2}S_H^n-\frac{3\gamma}{4}\delta_x^{H,2}F_H^n+\frac{7\Delta t^2}{96}(S_H)_{ttt}^n+O(\Delta t^3). \label{eq:hsource-quarter-step-source-error}
+\end{equation}
+Thus the quarter-step source case is also first-order accurate for a spatially varying \(S_H\), and second-order when \(\delta_x^{H,2}S_H=0\).
+
+Assume \(S_H(x,t)=\widehat{S}_H e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{H,2}e^{ikx}=\lambda_{H,x}e^{ikx}\), and \(q_H=-\gamma\lambda_{H,x}\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-symmetric-source} gives
+\begin{equation}
+    \begin{aligned} F_{H,\mathrm{mid}}^n & =\frac{\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t} \\
+                                          & =\frac{\widehat{S}_H e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q_H\right)e^{i\theta/2}-e^{-i\theta/2}\right] \\
+                                          & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
+    \end{aligned} \label{eq:hsource-midpoint-source-amplitude}
+\end{equation}
+so \(\widehat{F}_{H,\mathrm{mid}}=\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]\).
+Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-quarter-step-source} gives
+\begin{equation}
+    \begin{aligned} F_{H,\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{4}}\right] \\
+                                              & =\frac{\widehat{S}_H e^{i(kx+\omega t_n)}}{2\Delta t}\left[\left(1+q_H\right)e^{i\theta/4}-\left(1+q_H\right)e^{-3i\theta/4}+\left(1+q_H\right)e^{3i\theta/4}-\left(1-q_H\right)e^{-i\theta/4}\right] \\
+                                              & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{4}\right)+i\left(\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right)\right]e^{i(kx+\omega t_n)}.
+    \end{aligned} \label{eq:hsource-quarter-source-amplitude}
+\end{equation}
+Therefore the magnitude ratio between the quarter-step and midpoint magnetic-source terms is
+\begin{equation}
+    \frac{\left|\widehat{F}_{H,\mathrm{quarter}}\right|}{\left|\widehat{F}_{H,\mathrm{mid}}\right|}=\frac{\sqrt{q_H^2\cos^2\left(\frac{\theta}{4}\right)+\left[\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right]^2}}{\sqrt{q_H^2\cos^2\left(\frac{\theta}{2}\right)+\left(2+q_H\right)^2\sin^2\left(\frac{\theta}{2}\right)}}. \label{eq:hsource-source-magnitude-ratio}
+\end{equation}
+For a spatially uniform source, \(q_H=0\), this reduces to
+\begin{equation}
+    \frac{\left|\widehat{F}_{H,\mathrm{quarter}}\right|}{\left|\widehat{F}_{H,\mathrm{mid}}\right|}=\left|\cos\left(\frac{\omega\Delta t}{4}\right)\right|. \label{eq:hsource-uniform-source-magnitude-ratio}
+\end{equation}
+\end{document}

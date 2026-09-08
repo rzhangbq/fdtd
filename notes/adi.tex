@@ -1155,7 +1155,7 @@ In the macroscopic ADI push these two families are treated differently: soft ele
 
 \subsection{Soft Electric Sources in the ADI Electric Update}
 
-Write $S_{E_x,i+\tfrac12,j,k}^{n+\frac12}$ for the soft-source value assigned to the $E_x$ edge at $\bigl(i+\tfrac12,j,k\bigr)$ and the arrival time level $n+\tfrac12$ (and likewise for $E_y$ and $E_z$ at their staggered locations). Over a full step the intended soft contribution at that edge is split equally between the two ADI half-steps and evaluated at the resulting field levels $n+\tfrac12$ and $n+1$. The first-half electric update \eqref{eq:first-e-ex-adi} is then modified to
+Write $S_{E_x,i+\tfrac12,j,k}^{n+\frac12}$ for the soft-source value assigned to the $E_x$ edge at $\bigl(i+\tfrac12,j,k\bigr)$ and the midpoint time level $n+\tfrac12$ (and likewise for $E_y$ and $E_z$ at their staggered locations). Over a full step the intended soft contribution at that edge is split equally between the two ADI half-steps, with both contributions evaluated at the common midpoint $n+\tfrac12$. The first-half electric update \eqref{eq:first-e-ex-adi} is then modified to
 \begin{equation}\label{eq:adi-ex-soft-unnormalized}
     E_{x,i+\tfrac12,j,k}^{n+\frac12}
     = C_{a,i+\tfrac12,j,k}\,E_{x,i+\tfrac12,j,k}^{n}
@@ -1167,7 +1167,7 @@ on edges where the $E_x$ flag equals $2$, and is unchanged elsewhere. The second
     E_{x,i+\tfrac12,j,k}^{n+1}
     = C_{a,i+\tfrac12,j,k}\,E_{x,i+\tfrac12,j,k}^{n+\frac12}
     + C_{b,i+\tfrac12,j,k}\,[H_4]
-    + \frac12\,S_{E_x,i+\tfrac12,j,k}^{n+1}.
+    + \frac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}.
 \end{equation}
 The same construction applies componentwise to $E_y$ and $E_z$. The magnetic updates themselves are unchanged by the electric source; only the electric right-hand side is affected.
 
@@ -1192,7 +1192,7 @@ with the same coefficients $\alpha_{x1},\beta_{x1},\gamma_{x1},p_{x1},q_{x1},r_{
 \begin{equation}
     \texttt{rhs}_{i,j,k} \mathrel{+}= \tfrac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/C_{b,i+\tfrac12,j,k}
 \end{equation}
-added after the curl terms have been assembled. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way, and the second half-step is analogous with $S_{E_x,i+\tfrac12,j,k}^{n+1}/(2C_{b,i+\tfrac12,j,k})$ on the normalized right-hand side.
+added after the curl terms have been assembled. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way, and the second half-step uses the same midpoint sample, with $S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/(2C_{b,i+\tfrac12,j,k})$ on the normalized right-hand side.
 
 Consequently a hard electric source (flag $=1$), which would require constraining the unknown $E$ itself rather than adding to the right-hand side, is rejected in the ADI electric path.
 
@@ -1220,7 +1220,7 @@ Over one full step $\Delta t$, the macroscopic ADI scheme therefore proceeds as 
     \item Form and solve the first-half electric systems with soft electric sources $S_E^{n+\frac12}$ added as $\tfrac12 S_E^{n+\frac12}$ (equivalently $\tfrac12 S_E^{n+\frac12}/C_b$ on the normalized RHS).
     \item Update $\mathbf{B}$ to $n+\tfrac12$ from the ADI magnetic formulae.
     \item Apply magnetic excitation to $\mathbf{B}^{n+\frac12}$ (soft: add $\tfrac12 S_B^{n+\frac12}$; hard: set equal to $S_B^{n+\frac12}$).
-    \item Form and solve the second-half electric systems with soft electric sources $S_E^{n+1}$.
+    \item Form and solve the second-half electric systems using the same midpoint soft electric sources $S_E^{n+\frac12}$.
     \item Update $\mathbf{B}$ to $n+1$, then apply magnetic excitation evaluated at $n+1$.
 \end{enumerate}
 Hard electric sources are not part of this path. Soft electric sources never overwrite $E$; they only augment the Amp\`ere right-hand side of each half-step, consistently with the half-step coefficients $C_a$ and $C_b$ of \eqref{eq:adi-half-coefficients}.
