@@ -1061,8 +1061,7 @@ For the periodic case, periodic boundaries were imposed in all directions and th
 
 The measured FFT peak was divided by $f_0$. For this fixed spatial mode the normalized frequency is also the normalized phase velocity, $f/f_0=v_p/c$, and the analytic ADI prediction is
 \begin{equation}
-    \frac{f_{\mathrm{ADI}}}{f_0}
-    =\frac{2\arctan\!\left[S\sin(k\Delta z/2)\right]}{S\,k\Delta z}.
+    \frac{f_{\mathrm{ADI}}}{f_0}=\frac{2\arctan\!\left[S\sin(k\Delta z/2)\right]}{S\,k\Delta z}.
 \end{equation}
 
 
@@ -1072,11 +1071,7 @@ Figure~\ref{fig:adi-phase-velocity-standing} compares the measured frequencies w
 
 The dispersion relation was also tested by exciting the PEC cavity from initially zero fields. The geometry, material parameters, resolution, CFL numbers, run duration, and boundary conditions were identical to those of the PEC standing-wave test above. Only $E_y$ was excited, using the soft source
 \begin{equation}
-    S_{E_y}(z,t)
-    =E_0\frac{\Delta t}{T_P}
-    \sin\!\left(\frac{2\pi z}{L_z}\right)
-    \exp\!\left[-\frac{(t-3T_P)^2}{2T_P^2}\right]
-    \sin(2\pi f_0t),
+    S_{E_y}(z,t) =E_0\frac{\Delta t}{T_P} \sin\!\left(\frac{2\pi z}{L_z}\right) \exp\!\left[-\frac{(t-3T_P)^2}{2T_P^2}\right] \sin(2\pi f_0t),
 \end{equation}
 where $E_0=1$, $f_0=c/L_z$, and $T_P=1/f_0$. Thus the source has the spatial profile of the one-wavelength cavity mode and a Gaussian envelope centered at $3T_P$ with a width of one period. The factor $\Delta t/T_P$ keeps the total excitation approximately independent of the CFL number. No magnetic excitation was applied.
 \begin{figure}[htpb]
