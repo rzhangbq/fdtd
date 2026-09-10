@@ -179,31 +179,34 @@ The source approximation in equation~\eqref{eq:wave-equation-quarter-step-source
 \end{equation}
 Since \(\gamma=O(\Delta t^2)\), the quarter-step source case is also second-order accurate.
 
-Assume \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{E,2}e^{ikx}=\lambda_xe^{ikx}\), and \(q=-\gamma\lambda_x\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-symmetric-source} gives
+Assume \(S(x,t)=\widehat{S}e^{i(\omega t-kx)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{E,2}e^{-ikx}=\lambda_xe^{-ikx}\), and \(q=-\gamma\lambda_x\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-symmetric-source} gives
 \begin{equation}
     \begin{aligned} F_{\mathrm{mid,2}}^n & =\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}                                      \\
-                                     & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
-                                     & =\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(kx+\omega t_n)},
+                                     & =\frac{\widehat{S}e^{i(\omega t_n-kx)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
+                                     & =\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(\omega t_n-kx)},
     \end{aligned} \label{eq:midpoint-both-source-amplitude}
 \end{equation}
 so \(\widehat{F}_{\mathrm{mid,2}}=\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-single-midpoint-source} gives
 \begin{equation}
     \begin{aligned} F_{\mathrm{mid,1}}^n & =\frac{1}{\Delta t}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right] \\
-                                     & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1-q\right)e^{i\theta/2}-\left(1+q\right)e^{-i\theta/2}\right]                \\
-                                     & =\frac{2\widehat{S}}{\Delta t}\left[i\sin\left(\frac{\theta}{2}\right)-q\cos\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
+                                     & =\frac{\widehat{S}e^{i(\omega t_n-kx)}}{\Delta t}\left[\left(1-q\right)e^{i\theta/2}-\left(1+q\right)e^{-i\theta/2}\right]                \\
+                                     & =\frac{2\widehat{S}}{\Delta t}\left[i\sin\left(\frac{\theta}{2}\right)-q\cos\left(\frac{\theta}{2}\right)\right]e^{i(\omega t_n-kx)}.
     \end{aligned} \label{eq:midpoint-source-amplitude}
 \end{equation}
 so \(\widehat{F}_{\mathrm{mid,1}}=\frac{2\widehat{S}}{\Delta t}\left[i\sin\left(\frac{\theta}{2}\right)-q\cos\left(\frac{\theta}{2}\right)\right]\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-quarter-step-source} gives
 \begin{equation}
     \begin{aligned} F_{\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{4}}\right] \\
-                                       & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{2\Delta t}\left[\left(1-q\right)e^{i\theta/4}-\left(1+q\right)e^{-3i\theta/4}+\left(1+q\right)e^{3i\theta/4}-\left(1-q\right)e^{-i\theta/4}\right]                                                           \\
-                                       & =\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]e^{i(kx+\omega t_n)}.
+                                       & =\frac{\widehat{S}e^{i(\omega t_n-kx)}}{2\Delta t}\left[\left(1-q\right)e^{i\theta/4}-\left(1+q\right)e^{-3i\theta/4}+\left(1+q\right)e^{3i\theta/4}-\left(1-q\right)e^{-i\theta/4}\right]                                                           \\
+                                       & =\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]e^{i(\omega t_n-kx)}.
     \end{aligned} \label{eq:quarter-source-amplitude}
 \end{equation}
 so \(\widehat{F}_{\mathrm{quarter}}=\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]\).
-Therefore the magnitude ratios between the quarter-step and midpoint-source terms are
+Therefore the magnitude ratios among the midpoint and quarter-step source terms are
+\begin{equation}
+    \frac{\left|\widehat{F}_{\mathrm{mid,1}}\right|}{\left|\widehat{F}_{\mathrm{mid,2}}\right|}=\sqrt{1+q^{2}\cot^{2}\left(\frac{\theta}{2}\right)}, \label{eq:source-magnitude-ratio-mid}
+\end{equation}
 \begin{equation}
     \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid,2}}\right|}=\left|\cos\left(\frac{\theta}{4}\right)+\frac{q\cos\left(\frac{\theta}{2}\right)}{2\cos\left(\frac{\theta}{4}\right)}\right|, \label{eq:source-magnitude-ratio-both}
 \end{equation}
@@ -212,8 +215,11 @@ Therefore the magnitude ratios between the quarter-step and midpoint-source term
 \end{equation}
 For a spatially uniform source, \(q=0\), both midpoint placements give the same magnitude, and the quarter-step magnitude is smaller by the factor
 \begin{equation}
+    \frac{\left|\widehat{F}_{\mathrm{mid,1}}\right|}{\left|\widehat{F}_{\mathrm{mid,2}}\right|}=1,\qquad
     \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid,2}}\right|}=\frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid,1}}\right|}=\left|\cos\left(\frac{\omega\Delta t}{4}\right)\right|. \label{eq:uniform-source-magnitude-ratio}
 \end{equation}
+
+
 
 \subsection{Magnetic field source terms}
 Let $S_{H,1}^n$ be the magnetic field source term in between $n$ and $n+\frac{1}{2}$, and $S_{H,2}^n$ be that in between $n+\frac{1}{2}$ and $n+1$.
@@ -329,27 +335,27 @@ The source approximation in equation~\eqref{eq:hsource-wave-equation-quarter-ste
 \end{equation}
 Thus the quarter-step source case is however first-order accurate for a spatially varying \(S_H\), and second-order when \(\delta_x^{H,2}S_H=0\).
 
-Assume \(S_H(x,t)=\widehat{S}_H e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{H,2}e^{ikx}=\lambda_{H,x}e^{ikx}\), and \(q_H=-\gamma\lambda_{H,x}\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-symmetric-source} gives
+Assume \(S_H(x,t)=\widehat{S}_H e^{i(\omega t-kx)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{H,2}e^{-ikx}=\lambda_{H,x}e^{-ikx}\), and \(q_H=-\gamma\lambda_{H,x}\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-symmetric-source} gives
 \begin{equation}
     \begin{aligned} F_{H,\mathrm{mid,2}}^n & =\frac{\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t}                                                               \\
-                                       & =\frac{\widehat{S}_H e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q_H\right)e^{i\theta/2}-e^{-i\theta/2}\right]                                            \\
-                                       & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
+                                       & =\frac{\widehat{S}_H e^{i(\omega t_n-kx)}}{\Delta t}\left[\left(1+q_H\right)e^{i\theta/2}-e^{-i\theta/2}\right]                                            \\
+                                       & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]e^{i(\omega t_n-kx)}.
     \end{aligned} \label{eq:hsource-midpoint-both-source-amplitude}
 \end{equation}
 so \(\widehat{F}_{H,\mathrm{mid,2}}=\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-single-midpoint-source} gives
 \begin{equation}
     \begin{aligned} F_{H,\mathrm{mid,1}}^n & =\left(1-\gamma\delta_x^{H,2}\right)\frac{S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t}                    \\
-                                       & =\frac{\left(1+q_H\right)\widehat{S}_H e^{i(kx+\omega t_n)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
-                                       & =\frac{2i\left(1+q_H\right)\widehat{S}_H}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(kx+\omega t_n)}.
+                                       & =\frac{\left(1+q_H\right)\widehat{S}_H e^{i(\omega t_n-kx)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
+                                       & =\frac{2i\left(1+q_H\right)\widehat{S}_H}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(\omega t_n-kx)}.
     \end{aligned} \label{eq:hsource-midpoint-source-amplitude}
 \end{equation}
 so \(\widehat{F}_{H,\mathrm{mid,1}}=\frac{2i\left(1+q_H\right)\widehat{S}_H}{\Delta t}\sin\left(\frac{\theta}{2}\right)\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-quarter-step-source} gives
 \begin{equation}
     \begin{aligned} F_{H,\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{4}}\right] \\
-                                         & =\frac{\widehat{S}_H e^{i(kx+\omega t_n)}}{2\Delta t}\left[\left(1+q_H\right)e^{i\theta/4}-\left(1+q_H\right)e^{-3i\theta/4}+\left(1+q_H\right)e^{3i\theta/4}-\left(1-q_H\right)e^{-i\theta/4}\right]                                                        \\
-                                         & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{4}\right)+i\left(\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right)\right]e^{i(kx+\omega t_n)}.
+                                         & =\frac{\widehat{S}_H e^{i(\omega t_n-kx)}}{2\Delta t}\left[\left(1+q_H\right)e^{i\theta/4}-\left(1+q_H\right)e^{-3i\theta/4}+\left(1+q_H\right)e^{3i\theta/4}-\left(1-q_H\right)e^{-i\theta/4}\right]                                                        \\
+                                         & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{4}\right)+i\left(\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right)\right]e^{i(\omega t_n-kx)}.
     \end{aligned} \label{eq:hsource-quarter-source-amplitude}
 \end{equation}
 Therefore the magnitude ratios between the quarter-step and midpoint magnetic-source terms are
