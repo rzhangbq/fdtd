@@ -115,19 +115,19 @@ Recall that \(\gamma=C_bD_b=c^2\Delta t^2/4\), then equation~\eqref{eq:e-only-fu
     \end{split}
 \end{align}
 
-Suppose the same source is applied in both substeps, with \(S_{E,1}^n=S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{1}{2}}\) and \(S_{E,1}^{n-1}=S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
+Suppose the source is added only once in the second substep and evaluated at the midpoint, with \(S_{E,1}^n=0\), \(S_{E,2}^n=\Delta t S^{n+\frac{1}{2}}\), \(S_{E,1}^{n-1}=0\), and \(S_{E,2}^{n-1}=\Delta t S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
 \begin{equation}
-    \frac{\Delta t}{2}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]=\Delta t\left(S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}\right). \label{eq:symmetric-source-reduction}
+    \Delta t\left[\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]. \label{eq:single-midpoint-source-reduction}
 \end{equation}
 Therefore equation~\eqref{eq:discrete-wave-equation} becomes
 \begin{equation}
-    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-symmetric-source}
+    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-single-midpoint-source}
 \end{equation}
-Assume \(S^{n+a}=S(t_n+a\Delta t)\) and \(F^n=S_t(t_n)\). The source approximation in equation~\eqref{eq:wave-equation-symmetric-source} has the Taylor expansion
+Assume \(S^{n+a}=S(t_n+a\Delta t)\) and \(F^n=S_t(t_n)\). The source approximation in equation~\eqref{eq:wave-equation-single-midpoint-source} has the Taylor expansion
 \begin{equation}
-    \frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}=F^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^4), \qquad \mathrm{error}=\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^4). \label{eq:symmetric-source-error}
+    F^n-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^3), \qquad \mathrm{error}=-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^3). \label{eq:single-midpoint-source-error}
 \end{equation}
-Thus the midpoint-source case is second-order accurate for \(F^n=S_t(t_n)\).
+Since \(\gamma=O(\Delta t^2)\), the single midpoint-source case is first-order accurate for a spatially varying \(S\), but remains second-order when \(\delta_x^{E,2}S=0\).
 
 Alternatively, suppose the first source is evaluated at the first quarter-step and the second source at the third quarter-step:
 \(S_{E,1}^n=\frac{\Delta t}{2}S^{n+\frac{1}{4}}\), \(S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{3}{4}}\), \(S_{E,1}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{3}{4}}\), and \(S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{4}}\). Then equation~\eqref{eq:discrete-wave-equation} becomes
@@ -140,14 +140,14 @@ The source approximation in equation~\eqref{eq:wave-equation-quarter-step-source
 \end{equation}
 Since \(\gamma=O(\Delta t^2)\), the quarter-step source case is also second-order accurate.
 
-Assume \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{E,2}e^{ikx}=\lambda_xe^{ikx}\), and \(q=-\gamma\lambda_x\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-symmetric-source} gives
+Assume \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{E,2}e^{ikx}=\lambda_xe^{ikx}\), and \(q=-\gamma\lambda_x\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-single-midpoint-source} gives
 \begin{equation}
-    \begin{aligned} F_{\mathrm{mid}}^n & =\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}                                      \\
-                                   & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
-                                   & =\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(kx+\omega t_n)},
+    \begin{aligned} F_{\mathrm{mid}}^n & =\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t} \\
+                                   & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q\right)e^{i\theta/2}-\left(1-q\right)e^{-i\theta/2}\right] \\
+                                   & =\frac{2\widehat{S}}{\Delta t}\left[q\cos\left(\frac{\theta}{2}\right)+i\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)},
     \end{aligned} \label{eq:midpoint-source-amplitude}
 \end{equation}
-so \(\widehat{F}_{\mathrm{mid}}=\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)\).
+so \(\widehat{F}_{\mathrm{mid}}=\frac{2\widehat{S}}{\Delta t}\left[q\cos\left(\frac{\theta}{2}\right)+i\sin\left(\frac{\theta}{2}\right)\right]\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:wave-equation-quarter-step-source} gives
 \begin{equation}
     \begin{aligned} F_{\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{4}}\right] \\
@@ -158,60 +158,13 @@ Substituting into the source term on the right-hand side of equation~\eqref{eq:w
 so \(\widehat{F}_{\mathrm{quarter}}=\frac{i\widehat{S}}{\Delta t}\left[\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right]\).
 Therefore the magnitude ratio between the quarter-step and midpoint-source terms is
 \begin{equation}
-    \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\left|\cos\left(\frac{\theta}{4}\right)+\frac{q\cos\left(\frac{\theta}{2}\right)}{2\cos\left(\frac{\theta}{4}\right)}\right|. \label{eq:source-magnitude-ratio}
+    \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\frac{\left|\left(1-q\right)\sin\left(\frac{\theta}{4}\right)+\left(1+q\right)\sin\left(\frac{3\theta}{4}\right)\right|}{2\sqrt{q^2\cos^2\left(\frac{\theta}{2}\right)+\sin^2\left(\frac{\theta}{2}\right)}}. \label{eq:source-magnitude-ratio}
 \end{equation}
 For a spatially uniform source, \(q=0\), so the quarter-step magnitude is smaller by the factor
 \begin{equation}
     \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\left|\cos\left(\frac{\omega\Delta t}{4}\right)\right|. \label{eq:uniform-source-magnitude-ratio}
 \end{equation}
-Finally, suppose the source is added only in the second substep, with \(S_{E,1}^n=S_{E,1}^{n-1}=0\), \(S_{E,2}^n=\Delta t S^{n+1}\), and \(S_{E,2}^{n-1}=\Delta t S^n\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
-\begin{equation}
-    \Delta t\left[\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n\right]. \label{eq:second-only-source-reduction}
-\end{equation}
-Therefore equation~\eqref{eq:discrete-wave-equation} becomes
-\begin{equation}
-    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n}{\Delta t}. \label{eq:wave-equation-second-only-source}
-\end{equation}
-For \(F^n=S_t(t_n)\), the source approximation has the Taylor expansion
-\begin{equation}
-    F^n+\frac{\Delta t}{2}S_{tt}^n+\frac{\Delta t^2}{6}S_{ttt}^n-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n-\gamma\delta_x^{E,2}F^n+O(\Delta t^3). \label{eq:second-only-source-error}
-\end{equation}
-Thus this case is only first-order accurate at \(t_n\). When \(\delta_x^{E,2}S=0\), it is instead a second-order approximation to \(S_t(t_{n+\frac{1}{2}})\), so its effective source is shifted forward by half a time step.
-For the harmonic source \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), substitution into equation~\eqref{eq:wave-equation-second-only-source} gives
-\begin{equation}
-    \begin{aligned} F_{\mathrm{second}}^n & =\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n}{\Delta t} \\
-                                           & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q\right)e^{i\theta}-\left(1-q\right)\right].
-    \end{aligned} \label{eq:second-only-source-amplitude}
-\end{equation}
-For a spatially uniform source, \(q=0\), this becomes
-\begin{equation}
-    F_{\mathrm{second}}^n=\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i\theta/2}e^{i(kx+\omega t_n)}. \label{eq:uniform-second-only-source-amplitude}
-\end{equation}
-Hence the second-only source has the same magnitude as the midpoint source when \(q=0\), but it has an additional phase advance \(\theta/2=\omega\Delta t/2\).
-Now suppose the source is added only in the second substep but sampled at the midpoint, with \(S_{E,1}^n=S_{E,1}^{n-1}=0\), \(S_{E,2}^n=\Delta t S^{n+\frac{1}{2}}\), and \(S_{E,2}^{n-1}=\Delta t S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
-\begin{equation}
-    \Delta t\left[\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]. \label{eq:second-only-midpoint-source-reduction}
-\end{equation}
-Therefore equation~\eqref{eq:discrete-wave-equation} becomes
-\begin{equation}
-    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-second-only-midpoint-source}
-\end{equation}
-For \(F^n=S_t(t_n)\), the source approximation has the Taylor expansion
-\begin{equation}
-    F^n-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^3). \label{eq:second-only-midpoint-source-error}
-\end{equation}
-Thus this case is first-order accurate for a spatially varying source because \(\gamma/\Delta t=O(\Delta t)\), but it is second-order when \(\delta_x^{E,2}S=0\).
-For the harmonic source \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), substitution gives
-\begin{equation}
-    \begin{aligned} F_{\mathrm{second,mid}}^n & =\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t} \\
-                                               & =\frac{2\widehat{S}}{\Delta t}\left[q\cos\left(\frac{\theta}{2}\right)+i\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
-    \end{aligned} \label{eq:second-only-midpoint-source-amplitude}
-\end{equation}
-Its magnitude relative to the two-substep midpoint source is
-\begin{equation}
-    \frac{\left|\widehat{F}_{\mathrm{second,mid}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\frac{\sqrt{q^2\cos^2\left(\frac{\theta}{2}\right)+\sin^2\left(\frac{\theta}{2}\right)}}{\left|\sin\left(\frac{\theta}{2}\right)\right|}. \label{eq:second-only-midpoint-magnitude-ratio}
-\end{equation}
-For a spatially uniform source, \(q=0\), the second-only midpoint source is exactly identical to the two-substep midpoint source.
+
 \subsection{Magnetic field source terms}
 Let $S_{H,1}^n$ be the magnetic field source term in between $n$ and $n+\frac{1}{2}$, and $S_{H,2}^n$ be that in between $n+\frac{1}{2}$ and $n+1$.
 \begin{equation}
@@ -286,20 +239,21 @@ Recall that \(\gamma=C_bD_b=c^2\Delta t^2/4\), then equation~\eqref{eq:hsource-h
          & c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\frac{1}{\Delta t^2}\left[\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^n-\left(1-\gamma\delta_x^{H,2}\right)S_{H,1}^{n-1}+\left(1-\gamma\delta_x^{H,2}\right)S_{H,2}^n-\left(1+\gamma\delta_x^{H,2}\right)S_{H,2}^{n-1}\right]. \label{eq:hsource-discrete-wave-equation}
     \end{split}
 \end{align}
-Suppose the same source is applied in both substeps, with \(S_{H,1}^n=S_{H,2}^n=\frac{\Delta t}{2}S_H^{n+\frac{1}{2}}\) and \(S_{H,1}^{n-1}=S_{H,2}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:hsource-discrete-wave-equation} reduce to
+
+Suppose the source is added only once in the first substep and evaluated at the midpoint, with \(S_{H,1}^n=\Delta t S_H^{n+\frac{1}{2}}\), \(S_{H,2}^n=0\), \(S_{H,1}^{n-1}=\Delta t S_H^{n-\frac{1}{2}}\), and \(S_{H,2}^{n-1}=0\). Then the source terms in equation~\eqref{eq:hsource-discrete-wave-equation} reduce to
 \begin{equation}
-    \frac{\Delta t}{2}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{2}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{2}}\right]=\Delta t\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}\right]. \label{eq:hsource-symmetric-source-reduction}
+    \Delta t\left(1-\gamma\delta_x^{H,2}\right)\left(S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}\right). \label{eq:hsource-single-midpoint-source-reduction}
 \end{equation}
 Therefore equation~\eqref{eq:hsource-discrete-wave-equation} becomes
 \begin{equation}
-    \frac{H_y^{n+1}-2H_y^n+H_y^{n-1}}{\Delta t^2}=c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t}. \label{eq:hsource-wave-equation-symmetric-source}
+    \frac{H_y^{n+1}-2H_y^n+H_y^{n-1}}{\Delta t^2}=c^2\delta_x^{H,2}\left(\frac{H_y^{n+1}+2H_y^n+H_y^{n-1}}{4}\right)+\left(1-\gamma\delta_x^{H,2}\right)\frac{S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t}. \label{eq:hsource-wave-equation-single-midpoint-source}
 \end{equation}
 
-Assume \(S_H^{n+a}=S_H(t_n+a\Delta t)\) and \(F_H^n=(S_H)_t(t_n)\). The source approximation in equation~\eqref{eq:hsource-wave-equation-symmetric-source} has the Taylor expansion
+Assume \(S_H^{n+a}=S_H(t_n+a\Delta t)\) and \(F_H^n=(S_H)_t(t_n)\). The source approximation in equation~\eqref{eq:hsource-wave-equation-single-midpoint-source} has the Taylor expansion
 \begin{equation}
-    F_H^n-\frac{\gamma}{\Delta t}\delta_x^{H,2}S_H^n-\frac{\gamma}{2}\delta_x^{H,2}F_H^n+\frac{\Delta t^2}{24}(S_H)_{ttt}^n+O(\Delta t^3). \label{eq:hsource-symmetric-source-error}
+    F_H^n-\gamma\delta_x^{H,2}F_H^n+\frac{\Delta t^2}{24}(S_H)_{ttt}^n+O(\Delta t^4). \label{eq:hsource-single-midpoint-source-error}
 \end{equation}
-Since \(\gamma=O(\Delta t^2)\), the term \(-\gamma\delta_x^{H,2}S_H^n/\Delta t\) is \(O(\Delta t)\). Thus this midpoint-source case is first-order accurate for a spatially varying \(S_H\), but remains second-order when \(\delta_x^{H,2}S_H=0\).
+Since \(\gamma=O(\Delta t^2)\), the single midpoint-source case is second-order accurate for \(F_H^n=(S_H)_t(t_n)\).
 
 Alternatively, suppose the first source is evaluated at the first quarter-step and the second source at the third quarter-step:
 \(S_{H,1}^n=\frac{\Delta t}{2}S_H^{n+\frac{1}{4}}\), \(S_{H,2}^n=\frac{\Delta t}{2}S_H^{n+\frac{3}{4}}\), \(S_{H,1}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{3}{4}}\), and \(S_{H,2}^{n-1}=\frac{\Delta t}{2}S_H^{n-\frac{1}{4}}\). Then equation~\eqref{eq:hsource-discrete-wave-equation} becomes
@@ -315,14 +269,14 @@ The source approximation in equation~\eqref{eq:hsource-wave-equation-quarter-ste
 \end{equation}
 Thus the quarter-step source case is also first-order accurate for a spatially varying \(S_H\), and second-order when \(\delta_x^{H,2}S_H=0\).
 
-Assume \(S_H(x,t)=\widehat{S}_H e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{H,2}e^{ikx}=\lambda_{H,x}e^{ikx}\), and \(q_H=-\gamma\lambda_{H,x}\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-symmetric-source} gives
+Assume \(S_H(x,t)=\widehat{S}_H e^{i(kx+\omega t)}\), and define \(\theta=\omega\Delta t\), \(\delta_x^{H,2}e^{ikx}=\lambda_{H,x}e^{ikx}\), and \(q_H=-\gamma\lambda_{H,x}\geq0\). Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-single-midpoint-source} gives
 \begin{equation}
-    \begin{aligned} F_{H,\mathrm{mid}}^n & =\frac{\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t} \\
-                                          & =\frac{\widehat{S}_H e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q_H\right)e^{i\theta/2}-e^{-i\theta/2}\right] \\
-                                          & =\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
+    \begin{aligned} F_{H,\mathrm{mid}}^n & =\left(1-\gamma\delta_x^{H,2}\right)\frac{S_H^{n+\frac{1}{2}}-S_H^{n-\frac{1}{2}}}{\Delta t} \\
+                                          & =\frac{\left(1+q_H\right)\widehat{S}_H e^{i(kx+\omega t_n)}}{\Delta t}\left(e^{i\theta/2}-e^{-i\theta/2}\right) \\
+                                          & =\frac{2i\left(1+q_H\right)\widehat{S}_H}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i(kx+\omega t_n)}.
     \end{aligned} \label{eq:hsource-midpoint-source-amplitude}
 \end{equation}
-so \(\widehat{F}_{H,\mathrm{mid}}=\frac{\widehat{S}_H}{\Delta t}\left[q_H\cos\left(\frac{\theta}{2}\right)+i\left(2+q_H\right)\sin\left(\frac{\theta}{2}\right)\right]\).
+so \(\widehat{F}_{H,\mathrm{mid}}=\frac{2i\left(1+q_H\right)\widehat{S}_H}{\Delta t}\sin\left(\frac{\theta}{2}\right)\).
 Substituting into the source term on the right-hand side of equation~\eqref{eq:hsource-wave-equation-quarter-step-source} gives
 \begin{equation}
     \begin{aligned} F_{H,\mathrm{quarter}}^n & =\frac{1}{2\Delta t}\left[\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{1}{4}}-\left(1-\gamma\delta_x^{H,2}\right)S_H^{n-\frac{3}{4}}+\left(1-\gamma\delta_x^{H,2}\right)S_H^{n+\frac{3}{4}}-\left(1+\gamma\delta_x^{H,2}\right)S_H^{n-\frac{1}{4}}\right] \\
@@ -332,7 +286,7 @@ Substituting into the source term on the right-hand side of equation~\eqref{eq:h
 \end{equation}
 Therefore the magnitude ratio between the quarter-step and midpoint magnetic-source terms is
 \begin{equation}
-    \frac{\left|\widehat{F}_{H,\mathrm{quarter}}\right|}{\left|\widehat{F}_{H,\mathrm{mid}}\right|}=\frac{\sqrt{q_H^2\cos^2\left(\frac{\theta}{4}\right)+\left[\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right]^2}}{\sqrt{q_H^2\cos^2\left(\frac{\theta}{2}\right)+\left(2+q_H\right)^2\sin^2\left(\frac{\theta}{2}\right)}}. \label{eq:hsource-source-magnitude-ratio}
+    \frac{\left|\widehat{F}_{H,\mathrm{quarter}}\right|}{\left|\widehat{F}_{H,\mathrm{mid}}\right|}=\frac{\sqrt{q_H^2\cos^2\left(\frac{\theta}{4}\right)+\left[\sin\left(\frac{\theta}{4}\right)+\left(1+q_H\right)\sin\left(\frac{3\theta}{4}\right)\right]^2}}{2\left(1+q_H\right)\left|\sin\left(\frac{\theta}{2}\right)\right|}. \label{eq:hsource-source-magnitude-ratio}
 \end{equation}
 For a spatially uniform source, \(q_H=0\), this reduces to
 \begin{equation}
