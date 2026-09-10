@@ -115,11 +115,7 @@ Recall that \(\gamma=C_bD_b=c^2\Delta t^2/4\), then equation~\eqref{eq:e-only-fu
     \end{split}
 \end{align}
 
-Suppose the same source is applied in both substeps, with \(S_{E,1}^n=S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{1}{2}}\) and \(S_{E,1}^{n-1}=S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
-\begin{equation}
-    \frac{\Delta t}{2}\left[\left(1+\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}+\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1-\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]=\Delta t\left(S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}\right). \label{eq:symmetric-source-reduction}
-\end{equation}
-Therefore equation~\eqref{eq:discrete-wave-equation} becomes
+Suppose the same source is applied in both substeps, with \(S_{E,1}^n=S_{E,2}^n=\frac{\Delta t}{2}S^{n+\frac{1}{2}}\) and \(S_{E,1}^{n-1}=S_{E,2}^{n-1}=\frac{\Delta t}{2}S^{n-\frac{1}{2}}\). Then equation~\eqref{eq:discrete-wave-equation} becomes
 \begin{equation}
     \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{S^{n+\frac{1}{2}}-S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-symmetric-source}
 \end{equation}
