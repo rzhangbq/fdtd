@@ -164,7 +164,54 @@ For a spatially uniform source, \(q=0\), so the quarter-step magnitude is smalle
 \begin{equation}
     \frac{\left|\widehat{F}_{\mathrm{quarter}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\left|\cos\left(\frac{\omega\Delta t}{4}\right)\right|. \label{eq:uniform-source-magnitude-ratio}
 \end{equation}
-
+Finally, suppose the source is added only in the second substep, with \(S_{E,1}^n=S_{E,1}^{n-1}=0\), \(S_{E,2}^n=\Delta t S^{n+1}\), and \(S_{E,2}^{n-1}=\Delta t S^n\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
+\begin{equation}
+    \Delta t\left[\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n\right]. \label{eq:second-only-source-reduction}
+\end{equation}
+Therefore equation~\eqref{eq:discrete-wave-equation} becomes
+\begin{equation}
+    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n}{\Delta t}. \label{eq:wave-equation-second-only-source}
+\end{equation}
+For \(F^n=S_t(t_n)\), the source approximation has the Taylor expansion
+\begin{equation}
+    F^n+\frac{\Delta t}{2}S_{tt}^n+\frac{\Delta t^2}{6}S_{ttt}^n-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n-\gamma\delta_x^{E,2}F^n+O(\Delta t^3). \label{eq:second-only-source-error}
+\end{equation}
+Thus this case is only first-order accurate at \(t_n\). When \(\delta_x^{E,2}S=0\), it is instead a second-order approximation to \(S_t(t_{n+\frac{1}{2}})\), so its effective source is shifted forward by half a time step.
+For the harmonic source \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), substitution into equation~\eqref{eq:wave-equation-second-only-source} gives
+\begin{equation}
+    \begin{aligned} F_{\mathrm{second}}^n & =\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+1}-\left(1+\gamma\delta_x^{E,2}\right)S^n}{\Delta t} \\
+                                           & =\frac{\widehat{S}e^{i(kx+\omega t_n)}}{\Delta t}\left[\left(1+q\right)e^{i\theta}-\left(1-q\right)\right].
+    \end{aligned} \label{eq:second-only-source-amplitude}
+\end{equation}
+For a spatially uniform source, \(q=0\), this becomes
+\begin{equation}
+    F_{\mathrm{second}}^n=\frac{2i\widehat{S}}{\Delta t}\sin\left(\frac{\theta}{2}\right)e^{i\theta/2}e^{i(kx+\omega t_n)}. \label{eq:uniform-second-only-source-amplitude}
+\end{equation}
+Hence the second-only source has the same magnitude as the midpoint source when \(q=0\), but it has an additional phase advance \(\theta/2=\omega\Delta t/2\).
+Now suppose the source is added only in the second substep but sampled at the midpoint, with \(S_{E,1}^n=S_{E,1}^{n-1}=0\), \(S_{E,2}^n=\Delta t S^{n+\frac{1}{2}}\), and \(S_{E,2}^{n-1}=\Delta t S^{n-\frac{1}{2}}\). Then the source terms in equation~\eqref{eq:discrete-wave-equation} reduce to
+\begin{equation}
+    \Delta t\left[\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}\right]. \label{eq:second-only-midpoint-source-reduction}
+\end{equation}
+Therefore equation~\eqref{eq:discrete-wave-equation} becomes
+\begin{equation}
+    \frac{E_z^{n+1}-2E_z^n+E_z^{n-1}}{\Delta t^2}=c^2\delta_x^{E,2}\left(\frac{E_z^{n+1}+2E_z^n+E_z^{n-1}}{4}\right)+\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t}. \label{eq:wave-equation-second-only-midpoint-source}
+\end{equation}
+For \(F^n=S_t(t_n)\), the source approximation has the Taylor expansion
+\begin{equation}
+    F^n-\frac{2\gamma}{\Delta t}\delta_x^{E,2}S^n+\frac{\Delta t^2}{24}S_{ttt}^n+O(\Delta t^3). \label{eq:second-only-midpoint-source-error}
+\end{equation}
+Thus this case is first-order accurate for a spatially varying source because \(\gamma/\Delta t=O(\Delta t)\), but it is second-order when \(\delta_x^{E,2}S=0\).
+For the harmonic source \(S(x,t)=\widehat{S}e^{i(kx+\omega t)}\), substitution gives
+\begin{equation}
+    \begin{aligned} F_{\mathrm{second,mid}}^n & =\frac{\left(1-\gamma\delta_x^{E,2}\right)S^{n+\frac{1}{2}}-\left(1+\gamma\delta_x^{E,2}\right)S^{n-\frac{1}{2}}}{\Delta t} \\
+                                               & =\frac{2\widehat{S}}{\Delta t}\left[q\cos\left(\frac{\theta}{2}\right)+i\sin\left(\frac{\theta}{2}\right)\right]e^{i(kx+\omega t_n)}.
+    \end{aligned} \label{eq:second-only-midpoint-source-amplitude}
+\end{equation}
+Its magnitude relative to the two-substep midpoint source is
+\begin{equation}
+    \frac{\left|\widehat{F}_{\mathrm{second,mid}}\right|}{\left|\widehat{F}_{\mathrm{mid}}\right|}=\frac{\sqrt{q^2\cos^2\left(\frac{\theta}{2}\right)+\sin^2\left(\frac{\theta}{2}\right)}}{\left|\sin\left(\frac{\theta}{2}\right)\right|}. \label{eq:second-only-midpoint-magnitude-ratio}
+\end{equation}
+For a spatially uniform source, \(q=0\), the second-only midpoint source is exactly identical to the two-substep midpoint source.
 \subsection{Magnetic field source terms}
 Let $S_{H,1}^n$ be the magnetic field source term in between $n$ and $n+\frac{1}{2}$, and $S_{H,2}^n$ be that in between $n+\frac{1}{2}$ and $n+1$.
 \begin{equation}
