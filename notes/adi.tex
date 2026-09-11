@@ -1185,9 +1185,30 @@ Dividing \eqref{eq:adi-ex-soft-unnormalized} by $C_{b,i+\tfrac12,j,k}$ and subst
 \end{align}
 with the same coefficients $\alpha_{x1},\beta_{x1},\gamma_{x1},p_{x1},q_{x1},r_{x1}$ as in Section~3. Away from soft-source edges the final term is omitted. In the implementation this contribution is the increment
 \begin{equation}
-    \texttt{rhs}_{i,j,k} \mathrel{+}= \tfrac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/C_{b,i+\tfrac12,j,k}
+    \texttt{rhs}_{i+\tfrac12,j,k} \mathrel{+}= \tfrac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/C_{b,i+\tfrac12,j,k}
 \end{equation}
-added after the curl terms have been assembled. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way, and the second half-step uses the same midpoint sample, with $S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/(2C_{b,i+\tfrac12,j,k})$ on the normalized right-hand side.
+added after the curl terms have been assembled. The $E_y$ and $E_z$ first-half systems are modified in exactly the same way.
+
+The second half-step is similar. For example, the $E_x$ system is
+\begin{align}
+    \begin{split}
+        -\alpha_{x2}E_{x,i+\tfrac12,j,k-1}^{n+1}
+        + \beta_{x2}E_{x,i+\tfrac12,j,k}^{n+1}
+        - \gamma_{x2}E_{x,i+\tfrac12,j,k+1}^{n+1}
+         & = p_{x2}E_{x,i+\tfrac12,j,k}^{n+\frac12}                                                                               \\
+         & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+\frac12}\Big) \\
+         & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n+\frac12}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n+\frac12}\Big) \\
+         & \quad +\frac{q_{x2}}{\Delta x\Delta z}\Big(E_{z,i+1,j,k-\tfrac12}^{n+\frac12}-E_{z,i,j,k-\tfrac12}^{n+\frac12}\Big)    \\
+         & \quad -\frac{r_{x2}}{\Delta x\Delta z}\Big(E_{z,i+1,j,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}\Big)    \\
+         & \quad +\frac{1}{2C_{b,i+\tfrac12,j,k}}\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}.
+    \end{split}
+    \label{eq:second-e-ex-adi-tridiagonal-excitation}
+\end{align}
+Thus, after the second-half curl terms have been assembled, the normalized right-hand side is changed by
+\begin{equation}
+    \texttt{rhs}_{i+\tfrac12,j,k} \mathrel{+}= \tfrac12\,S_{E_x,i+\tfrac12,j,k}^{n+\frac12}/C_{b,i+\tfrac12,j,k}.
+\end{equation}
+The $E_y$ and $E_z$ second-half systems are modified in exactly the same way.
 
 Consequently a hard electric source (flag $=1$), which would require constraining the unknown $E$ itself rather than adding to the right-hand side, is rejected in the ADI electric path.
 
