@@ -855,8 +855,10 @@ then
 \end{equation}
 is already satisfied for all $n$.
 
-\section{Perfect Matching Layer Boundary Conditions}
-Here we derive the convolutional PML boundary conditions for the ADI scheme from \cite{gedney2001perfectly}. The PML cells belong to the same Yee grid as the physical cells. The electric field is advanced by the tridiagonal systems, and the magnetic flux density is advanced after each electric solve; the magnetic field in the equations below is obtained from $H=B/\mu$.
+\section{Perfectly Matched Layer Boundary Conditions}
+Here we derive the convolutional PML boundary conditions for the ADI scheme from \cite{gedney2001perfectly}. The PML cells belong to the same contiguous Yee grid as the physical cells; this implementation does not construct the split-field \texttt{pml[lev]} boxes used by the FDTD solver. With \texttt{warpx.do\_pml\_in\_domain=1}, the outer $N_{\mathrm{pml}}$ cells of the user-supplied domain form the PML. With \texttt{warpx.do\_pml\_in\_domain=0}, the default, the geometry is first extended by $N_{\mathrm{pml}}$ cells on each face marked as PML, so that the absorbing layer lies outside the user-supplied physical domain while remaining part of the same ADI grid. The current implementation is restricted to three dimensions and one AMR level. A direction containing a PML must be nonperiodic and must have a PML or PEC boundary at both outer walls. These walls provide a PEC-like termination: tangential $E$ and normal $B$ are set to zero there.
+
+The electric field is advanced by the tridiagonal systems, and the magnetic flux density is advanced after each electric solve; the magnetic field in the equations below is obtained from $H=B/\mu$.
 
 For a derivative in direction $s$, let $D_s H$ denote the backward Yee difference at an electric-field location and $D_s E$ the forward Yee difference at a magnetic-field location. The final subscript $s$ of $\psi_{e\alpha s}$ and $\psi_{h\beta s}$ identifies the derivative direction, not the component being differentiated. For example, $\psi_{exy}$ corresponds to $D_y H_z$ in the $E_x$ equation, while $\psi_{hzy}$ corresponds to $D_y E_x$ in the $H_z$ equation. The corresponding component pairs are
 \begin{align}
@@ -893,15 +895,15 @@ The PML recursion coefficients are
     \end{align}
 \end{subequations}
 When $\sigma_s+\kappa_s\alpha_s=0$, the code sets $a_s=0$.
-Here $\sigma_s$, $\alpha_s$, and $\kappa_s$ are evaluated at the same location as the corresponding auxiliary variable and in the same derivative direction $s$. For a PML layer normal to direction $s$, let $\rho_s$ be the distance from the inner PML interface into the PML, $L_s=N_{\mathrm{pml}}\Delta s$ be the PML thickness, and $m$ be the polynomial grading order. Then, for $0\le \rho_s\le L_s$,
+Here $\sigma_s$, $\alpha_s$, and $\kappa_s$ are evaluated at the same location as the corresponding auxiliary variable and in the same derivative direction $s$. For a PML layer normal to direction $s$, let $\rho_s$ be the distance from the inner PML interface into the PML, $L_s=N_{\mathrm{pml}}\Delta s$ be the PML thickness, and $m$ be the polynomial grading order. Then, for $0< \rho_s\le L_s$,
 \begin{align}
     \sigma_s(\rho_s) & = \sigma_{s,\max}\left(\frac{\rho_s}{L_s}\right)^m,                  \\
     \kappa_s(\rho_s) & = 1+\left(\kappa_{s,\max}-1\right)\left(\frac{\rho_s}{L_s}\right)^m, \\
     \alpha_s(\rho_s) & = \alpha_{s,\max}\left(1-\frac{\rho_s}{L_s}\right),
 \end{align}
-while outside the PML,
+while outside the PML and at the discrete inner interface $\rho_s=0$,
 \begin{equation}
-    \sigma_s=0, \qquad \alpha_s=0, \qquad \kappa_s=1, \qquad a_s=0.
+    \sigma_s=0, \qquad \alpha_s=0, \qquad \kappa_s=1, \qquad a_s=0, \qquad b_s=1, \qquad S_s=1.
 \end{equation}
 Unless the maximum conductivity is prescribed directly, it may be chosen from a target reflection coefficient $R$ as
 \begin{equation}
@@ -1024,7 +1026,7 @@ and the PML magnetic update can be written as
     \label{eq:adi-first-hy-pml}
 \end{equation}
 
-If $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:first-e-ex-pml-adi-tridiagonal}, \eqref{eq:first-e-ey-pml-adi-tridiagonal}, and \eqref{eq:first-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:first-e-ex-adi-tridiagonal}, \eqref{eq:first-e-ey-adi-tridiagonal}, and \eqref{eq:first-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-first-hz-pml}, \eqref{eq:adi-first-hx-pml}, and \eqref{eq:adi-first-hy-pml} reduce to \eqref{eq:adi-first-hz}, \eqref{eq:adi-first-hx}, and \eqref{eq:adi-first-hy}.
+When the PML is disabled, or equivalently when $\kappa_s=1$, $a_s=0$, $b_s=1$, and all PML auxiliary variables vanish, equations \eqref{eq:first-e-ex-pml-adi-tridiagonal}, \eqref{eq:first-e-ey-pml-adi-tridiagonal}, and \eqref{eq:first-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:first-e-ex-adi-tridiagonal}, \eqref{eq:first-e-ey-adi-tridiagonal}, and \eqref{eq:first-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-first-hz-pml}, \eqref{eq:adi-first-hx-pml}, and \eqref{eq:adi-first-hy-pml} reduce to \eqref{eq:adi-first-hz}, \eqref{eq:adi-first-hx}, and \eqref{eq:adi-first-hy}.
 
 \subsection{First PML Auxiliary Variable Half-Step}
 
@@ -1134,13 +1136,13 @@ and the PML magnetic update can be written as
     \label{eq:adi-second-hx-pml}
 \end{equation}
 
-If $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:second-e-ex-pml-adi-tridiagonal}, \eqref{eq:second-e-ey-pml-adi-tridiagonal}, and \eqref{eq:second-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:second-e-ex-adi-tridiagonal}, \eqref{eq:second-e-ey-adi-tridiagonal}, and \eqref{eq:second-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-second-hy-pml}, \eqref{eq:adi-second-hz-pml}, and \eqref{eq:adi-second-hx-pml} reduce to \eqref{eq:adi-second-hy}, \eqref{eq:adi-second-hz}, and \eqref{eq:adi-second-hx}.
+When the PML is disabled, or equivalently when $\kappa_s=1$, $a_s=0$, $b_s=1$, and all PML auxiliary variables vanish, equations \eqref{eq:second-e-ex-pml-adi-tridiagonal}, \eqref{eq:second-e-ey-pml-adi-tridiagonal}, and \eqref{eq:second-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:second-e-ex-adi-tridiagonal}, \eqref{eq:second-e-ey-adi-tridiagonal}, and \eqref{eq:second-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-second-hy-pml}, \eqref{eq:adi-second-hz-pml}, and \eqref{eq:adi-second-hx-pml} reduce to \eqref{eq:adi-second-hy}, \eqref{eq:adi-second-hz}, and \eqref{eq:adi-second-hx}.
 
 \subsection{Second PML Auxiliary Variable Half-Step}
 
 The PML auxiliary variables are advanced over the second half-step from time level $n+\tfrac12$ to $n+1$. The notation for $\psi_{e\alpha s}$ and $\psi_{h\beta s}$ is the same as in the first PML auxiliary-variable half-step. The explicit electric auxiliary variables $\psi_{exy}$, $\psi_{eyz}$, and $\psi_{ezx}$ are updated from $H^{n+\frac12}$ before the electric solve. The explicit magnetic auxiliary variables $\psi_{hzy}$, $\psi_{hxz}$, and $\psi_{hyx}$ are updated from $E^{n+\frac12}$ at the same point. After the electric solve, $\psi_{hyz}$, $\psi_{hzx}$, and $\psi_{hxy}$ are updated from $E^{n+1}$ and used in the magnetic update. The magnetic field is then obtained from $B^{n+1}/\mu$, and $\psi_{exz}$, $\psi_{eyx}$, and $\psi_{ezy}$ are updated from that field.
 
-The magnetic auxiliary variables are stored in the unscaled recursive-convolution form; therefore $D_b$ is applied when they enter the magnetic update, at the same staggered location as the corresponding magnetic field.
+The magnetic auxiliary variables are stored in the unscaled recursive-convolution form. Consequently, $D_b$ is applied at the same staggered location as the corresponding magnetic field, both in the direct magnetic update and in the magnetic terms eliminated into the electric right-hand side.
 
 \section{Dispersion Analysis}
 
