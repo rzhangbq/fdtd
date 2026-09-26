@@ -868,20 +868,17 @@ For a derivative in direction $s$, let $D_s H$ denote the backward Yee differenc
     &\longleftrightarrow (D_yE_x,D_xE_y,D_zE_y,D_yE_z,D_xE_z,D_zE_x).
 \end{align}
 
-At each Yee location the recursive-convolution variable satisfies
+The field update uses the auxiliary variable from the beginning of the half-step. The stretched derivative is
 \begin{equation}
-    \psi_s^+ = b_s\psi_s^- + a_s D_sF,
-    \qquad
-    S_s=\frac{1}{\kappa_s}+a_s.
-    \label{eq:adi-pml-implicit-stretch}
+    \frac{1}{\kappa_s}D_sF+\psi_s^-,
+    \label{eq:adi-pml-lagged-stretch}
 \end{equation}
-Here $-$ and $+$ denote the beginning and end of one ADI half-step. If the differentiated field $F$ is known, the auxiliary variable is updated first and the stretched derivative is $\kappa_s^{-1}D_sF+\psi_s^+$. If $F$ is the unknown field, then
+where $-$ denotes the start of the half-step. After $E$ and $B$ have both been advanced, every auxiliary is updated by
 \begin{equation}
-    \frac{1}{\kappa_s}D_sF^+ + \psi_s^+
-    = S_sD_sF^+ + b_s\psi_s^-.
-    \label{eq:adi-pml-eliminated-stretch}
+    \psi_s^+ = b_s\psi_s^- + a_s D_sF.
+    \label{eq:adi-pml-auxiliary-update}
 \end{equation}
-The $a_sD_sF^+$ term is therefore included in the implicit tridiagonal coefficients, rather than treated as an old auxiliary-variable source.
+An explicit-direction auxiliary uses the field from the start of the half-step, and an implicit-direction auxiliary uses the field just obtained. The coefficients $a_s$ and $b_s$ therefore appear only in this update. The tridiagonal matrix contains $1/\kappa_s$, not $a_s$.
 
 The PML recursion coefficients are
 \begin{subequations}\label{eq:first-pml-aux-coefficients}
@@ -903,7 +900,8 @@ Here $\sigma_s$, $\alpha_s$, and $\kappa_s$ are evaluated at the same location a
 \end{align}
 while outside the PML and at the discrete inner interface $\rho_s=0$,
 \begin{equation}
-    \sigma_s=0, \qquad \alpha_s=0, \qquad \kappa_s=1, \qquad a_s=0, \qquad b_s=1, \qquad S_s=1.
+    \sigma_s=0, \qquad \alpha_s=0, \qquad \kappa_s=1, \qquad
+    a_s=0, \qquad b_s=1.
 \end{equation}
 Unless the maximum conductivity is prescribed directly, it may be chosen from a target reflection coefficient $R$ as
 \begin{equation}
@@ -915,7 +913,7 @@ Unless the maximum conductivity is prescribed directly, it may be chosen from a 
 \end{equation}
 Here $R$ sets the conductivity profile; it is not necessarily the achieved numerical reflection coefficient.
 
-The coefficients $\kappa_s$, $a_s$, $b_s$, and $S_s$ in these equations are evaluated at the Yee location of the derivative: $x_s=x_{s,\mathrm{lo}}+i_s\Delta s$ on a nodal layout and $x_s=x_{s,\mathrm{lo}}+(i_s+\tfrac12)\Delta s$ on a cell-centered layout. In particular, the electric and magnetic factors $S_{s,E}$ and $S_{s,H}$ below are evaluated at their distinct staggered locations. Outside the PML, $b_s=1$ and $S_s=1$.
+The coefficients $\kappa_s$, $a_s$, and $b_s$ in these equations are evaluated at the Yee location of the derivative: $x_s=x_{s,\mathrm{lo}}+i_s\Delta s$ on a nodal layout and $x_s=x_{s,\mathrm{lo}}+(i_s+\tfrac12)\Delta s$ on a cell-centered layout. In particular, the electric and magnetic factors $\kappa_{s,E}$ and $\kappa_{s,H}$ below are evaluated at their distinct staggered locations. Outside the PML, $\kappa_s=1$, $a_s=0$, and $b_s=1$.
 
 \subsection{First ADI Half-Step}
 
@@ -928,25 +926,25 @@ Using the same formulation as the ADI tridiagonal systems, the three first-half-
 \end{equation}
 respectively. The direction $t$ is implicit, $u$ is the explicit direction in the electric curl, and $v$ is the explicit direction in the magnetic curl. A superscript $-$ means $n$ and a superscript $+$ means $n+\tfrac12$ in this subsection. Define the known explicit-direction terms
 \begin{align}
-    Q_{e,\alpha u}^+ &= \frac{1}{\kappa_{u,E_\alpha}}D_uH_\gamma^-+\psi_{e\alpha u}^+, \\
-    Q_{h,\beta v}^+ &= \frac{1}{\kappa_{v,H_\beta}}D_vE_\delta^-+\psi_{h\beta v}^+,
+    Q_{e,\alpha u}^- &= \frac{1}{\kappa_{u,E_\alpha}}D_uH_\gamma^-+\psi_{e\alpha u}^-, \\
+    Q_{h,\beta v}^- &= \frac{1}{\kappa_{v,H_\beta}}D_vE_\delta^-+\psi_{h\beta v}^-,
 \end{align}
 and the right-hand side
 \begin{align}
     \mathcal R_{\alpha 1}
     &=p_{\alpha 1}E_\alpha^-
-      +S_{t,E_\alpha}D_tH_\beta^-
-      -Q_{e,\alpha u}^+
-      +b_{t,E_\alpha}\psi_{e\alpha t}^- \notag\\
+      +\frac{1}{\kappa_{t,E_\alpha}}D_tH_\beta^-
+      -Q_{e,\alpha u}^-
+      +\psi_{e\alpha t}^- \notag\\
     &\quad
-      +S_{t,E_\alpha}D_t\!\left\{
+      +\frac{1}{\kappa_{t,E_\alpha}}D_t\!\left\{
         D_{b,H_\beta}\left[
-          b_{t,H_\beta}\psi_{h\beta t}^-
-          -Q_{h,\beta v}^+
+          \psi_{h\beta t}^-
+          -Q_{h,\beta v}^-
         \right]\right\}.
     \label{eq:first-pml-rhs}
 \end{align}
-The explicit auxiliaries $\psi_{e\alpha u}^+$ and $\psi_{h\beta v}^+$ are updated from $H^n$ and $E^n$, respectively, before these right-hand sides are formed. The implicit auxiliary $\psi_{h\beta t}^+$ depends on $E_\alpha^{n+\frac12}$; its new-field part is included in $S_{t,H_\beta}$.
+Every auxiliary in this right-hand side is the value at the start of the half-step. The auxiliaries are not updated until after $E$ and $B$.
 
 \paragraph{$E_x$ and $H_z$}
 Using the same formulation as \eqref{eq:first-e-ex-adi-tridiagonal}, the PML tridiagonal system is
@@ -959,18 +957,16 @@ Using the same formulation as \eqref{eq:first-e-ex-adi-tridiagonal}, the PML tri
 \end{equation}
 Here
 \begin{align}
-    \alpha_{x1}&=\frac{D_{b,i+\tfrac12,j-\tfrac12,k}
-      S_{y,E_x,i+\tfrac12,j,k}S_{y,H_z,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},\\
+    \alpha_{x1}&=\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\kappa_{y,E_x,i+\tfrac12,j,k}\kappa_{y,H_z,i+\tfrac12,j-\tfrac12,k}\Delta y^2},\\
     \beta_{x1}&=\frac{1}{C_{b,i+\tfrac12,j,k}}+\alpha_{x1}+\gamma_{x1},\\
-    \gamma_{x1}&=\frac{D_{b,i+\tfrac12,j+\tfrac12,k}
-      S_{y,E_x,i+\tfrac12,j,k}S_{y,H_z,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},\\
+    \gamma_{x1}&=\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\kappa_{y,E_x,i+\tfrac12,j,k}\kappa_{y,H_z,i+\tfrac12,j+\tfrac12,k}\Delta y^2},\\
     p_{x1}&=\frac{C_{a,i+\tfrac12,j,k}}{C_{b,i+\tfrac12,j,k}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_z^{n+\frac12}=H_z^n+D_{b,H_z}
     \left(\frac{1}{\kappa_{y,H_z}}D_yE_x^{n+\frac12}
-          +\psi_{hzy}^{n+\frac12}-Q_{h,zx}^{n+\frac12}\right).
+          +\psi_{hzy}^{n}-Q_{h,zx}^{n}\right).
     \label{eq:adi-first-hz-pml}
 \end{equation}
 
@@ -985,18 +981,16 @@ Using the same formulation as \eqref{eq:first-e-ey-adi-tridiagonal}, the PML tri
 \end{equation}
 Here
 \begin{align}
-    \alpha_{y1}&=\frac{D_{b,i,j+\tfrac12,k-\tfrac12}
-      S_{z,E_y,i,j+\tfrac12,k}S_{z,H_x,i,j+\tfrac12,k-\tfrac12}}{\Delta z^2},\\
+    \alpha_{y1}&=\frac{D_{b,i,j+\tfrac12,k-\tfrac12}}{\kappa_{z,E_y,i,j+\tfrac12,k}\kappa_{z,H_x,i,j+\tfrac12,k-\tfrac12}\Delta z^2},\\
     \beta_{y1}&=\frac{1}{C_{b,i,j+\tfrac12,k}}+\alpha_{y1}+\gamma_{y1},\\
-    \gamma_{y1}&=\frac{D_{b,i,j+\tfrac12,k+\tfrac12}
-      S_{z,E_y,i,j+\tfrac12,k}S_{z,H_x,i,j+\tfrac12,k+\tfrac12}}{\Delta z^2},\\
+    \gamma_{y1}&=\frac{D_{b,i,j+\tfrac12,k+\tfrac12}}{\kappa_{z,E_y,i,j+\tfrac12,k}\kappa_{z,H_x,i,j+\tfrac12,k+\tfrac12}\Delta z^2},\\
     p_{y1}&=\frac{C_{a,i,j+\tfrac12,k}}{C_{b,i,j+\tfrac12,k}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_x^{n+\frac12}=H_x^n+D_{b,H_x}
     \left(\frac{1}{\kappa_{z,H_x}}D_zE_y^{n+\frac12}
-          +\psi_{hxz}^{n+\frac12}-Q_{h,xy}^{n+\frac12}\right).
+          +\psi_{hxz}^{n}-Q_{h,xy}^{n}\right).
     \label{eq:adi-first-hx-pml}
 \end{equation}
 
@@ -1011,26 +1005,24 @@ Using the same formulation as \eqref{eq:first-e-ez-adi-tridiagonal}, the PML tri
 \end{equation}
 Here
 \begin{align}
-    \alpha_{z1}&=\frac{D_{b,i-\tfrac12,j,k+\tfrac12}
-      S_{x,E_z,i,j,k+\tfrac12}S_{x,H_y,i-\tfrac12,j,k+\tfrac12}}{\Delta x^2},\\
+    \alpha_{z1}&=\frac{D_{b,i-\tfrac12,j,k+\tfrac12}}{\kappa_{x,E_z,i,j,k+\tfrac12}\kappa_{x,H_y,i-\tfrac12,j,k+\tfrac12}\Delta x^2},\\
     \beta_{z1}&=\frac{1}{C_{b,i,j,k+\tfrac12}}+\alpha_{z1}+\gamma_{z1},\\
-    \gamma_{z1}&=\frac{D_{b,i+\tfrac12,j,k+\tfrac12}
-      S_{x,E_z,i,j,k+\tfrac12}S_{x,H_y,i+\tfrac12,j,k+\tfrac12}}{\Delta x^2},\\
+    \gamma_{z1}&=\frac{D_{b,i+\tfrac12,j,k+\tfrac12}}{\kappa_{x,E_z,i,j,k+\tfrac12}\kappa_{x,H_y,i+\tfrac12,j,k+\tfrac12}\Delta x^2},\\
     p_{z1}&=\frac{C_{a,i,j,k+\tfrac12}}{C_{b,i,j,k+\tfrac12}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_y^{n+\frac12}=H_y^n+D_{b,H_y}
     \left(\frac{1}{\kappa_{x,H_y}}D_xE_z^{n+\frac12}
-          +\psi_{hyx}^{n+\frac12}-Q_{h,yz}^{n+\frac12}\right).
+          +\psi_{hyx}^{n}-Q_{h,yz}^{n}\right).
     \label{eq:adi-first-hy-pml}
 \end{equation}
 
-When the PML is disabled, or equivalently when $\kappa_s=1$, $a_s=0$, $b_s=1$, and all PML auxiliary variables vanish, equations \eqref{eq:first-e-ex-pml-adi-tridiagonal}, \eqref{eq:first-e-ey-pml-adi-tridiagonal}, and \eqref{eq:first-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:first-e-ex-adi-tridiagonal}, \eqref{eq:first-e-ey-adi-tridiagonal}, and \eqref{eq:first-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-first-hz-pml}, \eqref{eq:adi-first-hx-pml}, and \eqref{eq:adi-first-hy-pml} reduce to \eqref{eq:adi-first-hz}, \eqref{eq:adi-first-hx}, and \eqref{eq:adi-first-hy}.
+When the PML is disabled, or equivalently when $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:first-e-ex-pml-adi-tridiagonal}, \eqref{eq:first-e-ey-pml-adi-tridiagonal}, and \eqref{eq:first-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:first-e-ex-adi-tridiagonal}, \eqref{eq:first-e-ey-adi-tridiagonal}, and \eqref{eq:first-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-first-hz-pml}, \eqref{eq:adi-first-hx-pml}, and \eqref{eq:adi-first-hy-pml} reduce to \eqref{eq:adi-first-hz}, \eqref{eq:adi-first-hx}, and \eqref{eq:adi-first-hy}.
 
 \subsection{First PML Auxiliary Variable Half-Step}
 
-The PML auxiliary variables are advanced over the first half-step from time level $n$ to $n+\tfrac12$. The explicit electric auxiliary variables $\psi_{exz}$, $\psi_{eyx}$, and $\psi_{ezy}$ are updated from the magnetic fields at time level $n$ before the electric solve. The explicit magnetic auxiliary variables $\psi_{hzx}$, $\psi_{hxy}$, and $\psi_{hyz}$ are updated from the electric fields at time level $n$ at the same point. After the electric solve, $\psi_{hzy}$, $\psi_{hxz}$, and $\psi_{hyx}$ are updated from $E^{n+\frac12}$ and used in the magnetic update. The magnetic field is then obtained from $B^{n+\frac12}/\mu$, and $\psi_{exy}$, $\psi_{eyz}$, and $\psi_{ezx}$ are updated from that field. Thus the known and unknown derivative contributions use the time levels in \eqref{eq:adi-pml-implicit-stretch} and \eqref{eq:adi-pml-eliminated-stretch}, respectively.
+The PML auxiliary variables advance from time level $n$ to $n+\tfrac12$ only after $E^{n+\frac12}$ and $B^{n+\frac12}$ are known. The explicit magnetic auxiliaries $\psi_{hzx}$, $\psi_{hxy}$, and $\psi_{hyz}$ are updated from $E^n$. The implicit magnetic auxiliaries $\psi_{hzy}$, $\psi_{hxz}$, and $\psi_{hyx}$ are updated from $E^{n+\frac12}$. The explicit electric auxiliaries $\psi_{exz}$, $\psi_{eyx}$, and $\psi_{ezy}$ are updated from $H^n$, and the implicit electric auxiliaries $\psi_{exy}$, $\psi_{eyz}$, and $\psi_{ezx}$ are updated from $H^{n+\frac12}=B^{n+\frac12}/\mu$. These updates use \eqref{eq:adi-pml-auxiliary-update}.
 
 \subsection{Second ADI Half-Step}
 
@@ -1041,22 +1033,22 @@ Using the same formulation as the ADI tridiagonal systems, the three second-half
     (E_z,H_x,H_y,E_y;y,x,z),
     \label{eq:second-pml-component-pairs}
 \end{equation}
-respectively. In this subsection a superscript $-$ means $n+\tfrac12$ and a superscript $+$ means $n+1$. The magnetic and electric curls have the opposite orientation, so $\eta=-1$ and the right-hand side is
+respectively. In this subsection a superscript $-$ means $n+\tfrac12$ and a superscript $+$ means $n+1$. The magnetic and electric curls have the opposite orientation, and the right-hand side is
 \begin{align}
     \mathcal R_{\alpha 2}
     &=p_{\alpha 2}E_\alpha^-
-      -S_{t,E_\alpha}D_tH_\beta^-
-      +Q_{e,\alpha u}^+
-      -b_{t,E_\alpha}\psi_{e\alpha t}^- \notag\\
+      -\frac{1}{\kappa_{t,E_\alpha}}D_tH_\beta^-
+      +Q_{e,\alpha u}^-
+      -\psi_{e\alpha t}^- \notag\\
     &\quad
-      +S_{t,E_\alpha}D_t\!\left\{
+      +\frac{1}{\kappa_{t,E_\alpha}}D_t\!\left\{
         D_{b,H_\beta}\left[
-          b_{t,H_\beta}\psi_{h\beta t}^-
-          -Q_{h,\beta v}^+
+          \psi_{h\beta t}^-
+          -Q_{h,\beta v}^-
         \right]\right\},
     \label{eq:second-pml-rhs}
 \end{align}
-where $Q_{e,\alpha u}^+$ and $Q_{h,\beta v}^+$ are defined as above using the fields at time level $n+\tfrac12$.
+where $Q_{e,\alpha u}^-$ and $Q_{h,\beta v}^-$ are defined as above using the fields and auxiliaries at time level $n+\tfrac12$.
 
 \paragraph{$E_x$ and $H_y$}
 Using the same formulation as \eqref{eq:second-e-ex-adi-tridiagonal}, the PML tridiagonal system is
@@ -1069,18 +1061,16 @@ Using the same formulation as \eqref{eq:second-e-ex-adi-tridiagonal}, the PML tr
 \end{equation}
 Here
 \begin{align}
-    \alpha_{x2}&=\frac{D_{b,i+\tfrac12,j,k-\tfrac12}
-      S_{z,E_x,i+\tfrac12,j,k}S_{z,H_y,i+\tfrac12,j,k-\tfrac12}}{\Delta z^2},\\
+    \alpha_{x2}&=\frac{D_{b,i+\tfrac12,j,k-\tfrac12}}{\kappa_{z,E_x,i+\tfrac12,j,k}\kappa_{z,H_y,i+\tfrac12,j,k-\tfrac12}\Delta z^2},\\
     \beta_{x2}&=\frac{1}{C_{b,i+\tfrac12,j,k}}+\alpha_{x2}+\gamma_{x2},\\
-    \gamma_{x2}&=\frac{D_{b,i+\tfrac12,j,k+\tfrac12}
-      S_{z,E_x,i+\tfrac12,j,k}S_{z,H_y,i+\tfrac12,j,k+\tfrac12}}{\Delta z^2},\\
+    \gamma_{x2}&=\frac{D_{b,i+\tfrac12,j,k+\tfrac12}}{\kappa_{z,E_x,i+\tfrac12,j,k}\kappa_{z,H_y,i+\tfrac12,j,k+\tfrac12}\Delta z^2},\\
     p_{x2}&=\frac{C_{a,i+\tfrac12,j,k}}{C_{b,i+\tfrac12,j,k}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_y^{n+1}=H_y^{n+\frac12}-D_{b,H_y}
     \left(\frac{1}{\kappa_{z,H_y}}D_zE_x^{n+1}
-          +\psi_{hyz}^{n+1}-Q_{h,yx}^{n+1}\right).
+          +\psi_{hyz}^{n+\frac12}-Q_{h,yx}^{n+\frac12}\right).
     \label{eq:adi-second-hy-pml}
 \end{equation}
 
@@ -1095,18 +1085,16 @@ Using the same formulation as \eqref{eq:second-e-ey-adi-tridiagonal}, the PML tr
 \end{equation}
 Here
 \begin{align}
-    \alpha_{y2}&=\frac{D_{b,i-\tfrac12,j+\tfrac12,k}
-      S_{x,E_y,i,j+\tfrac12,k}S_{x,H_z,i-\tfrac12,j+\tfrac12,k}}{\Delta x^2},\\
+    \alpha_{y2}&=\frac{D_{b,i-\tfrac12,j+\tfrac12,k}}{\kappa_{x,E_y,i,j+\tfrac12,k}\kappa_{x,H_z,i-\tfrac12,j+\tfrac12,k}\Delta x^2},\\
     \beta_{y2}&=\frac{1}{C_{b,i,j+\tfrac12,k}}+\alpha_{y2}+\gamma_{y2},\\
-    \gamma_{y2}&=\frac{D_{b,i+\tfrac12,j+\tfrac12,k}
-      S_{x,E_y,i,j+\tfrac12,k}S_{x,H_z,i+\tfrac12,j+\tfrac12,k}}{\Delta x^2},\\
+    \gamma_{y2}&=\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\kappa_{x,E_y,i,j+\tfrac12,k}\kappa_{x,H_z,i+\tfrac12,j+\tfrac12,k}\Delta x^2},\\
     p_{y2}&=\frac{C_{a,i,j+\tfrac12,k}}{C_{b,i,j+\tfrac12,k}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_z^{n+1}=H_z^{n+\frac12}-D_{b,H_z}
     \left(\frac{1}{\kappa_{x,H_z}}D_xE_y^{n+1}
-          +\psi_{hzx}^{n+1}-Q_{h,zy}^{n+1}\right).
+          +\psi_{hzx}^{n+\frac12}-Q_{h,zy}^{n+\frac12}\right).
     \label{eq:adi-second-hz-pml}
 \end{equation}
 
@@ -1121,26 +1109,24 @@ Using the same formulation as \eqref{eq:second-e-ez-adi-tridiagonal}, the PML tr
 \end{equation}
 Here
 \begin{align}
-    \alpha_{z2}&=\frac{D_{b,i,j-\tfrac12,k+\tfrac12}
-      S_{y,E_z,i,j,k+\tfrac12}S_{y,H_x,i,j-\tfrac12,k+\tfrac12}}{\Delta y^2},\\
+    \alpha_{z2}&=\frac{D_{b,i,j-\tfrac12,k+\tfrac12}}{\kappa_{y,E_z,i,j,k+\tfrac12}\kappa_{y,H_x,i,j-\tfrac12,k+\tfrac12}\Delta y^2},\\
     \beta_{z2}&=\frac{1}{C_{b,i,j,k+\tfrac12}}+\alpha_{z2}+\gamma_{z2},\\
-    \gamma_{z2}&=\frac{D_{b,i,j+\tfrac12,k+\tfrac12}
-      S_{y,E_z,i,j,k+\tfrac12}S_{y,H_x,i,j+\tfrac12,k+\tfrac12}}{\Delta y^2},\\
+    \gamma_{z2}&=\frac{D_{b,i,j+\tfrac12,k+\tfrac12}}{\kappa_{y,E_z,i,j,k+\tfrac12}\kappa_{y,H_x,i,j+\tfrac12,k+\tfrac12}\Delta y^2},\\
     p_{z2}&=\frac{C_{a,i,j,k+\tfrac12}}{C_{b,i,j,k+\tfrac12}}.
 \end{align}
 and the PML magnetic update can be written as
 \begin{equation}
     H_x^{n+1}=H_x^{n+\frac12}-D_{b,H_x}
     \left(\frac{1}{\kappa_{y,H_x}}D_yE_z^{n+1}
-          +\psi_{hxy}^{n+1}-Q_{h,xz}^{n+1}\right).
+          +\psi_{hxy}^{n+\frac12}-Q_{h,xz}^{n+\frac12}\right).
     \label{eq:adi-second-hx-pml}
 \end{equation}
 
-When the PML is disabled, or equivalently when $\kappa_s=1$, $a_s=0$, $b_s=1$, and all PML auxiliary variables vanish, equations \eqref{eq:second-e-ex-pml-adi-tridiagonal}, \eqref{eq:second-e-ey-pml-adi-tridiagonal}, and \eqref{eq:second-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:second-e-ex-adi-tridiagonal}, \eqref{eq:second-e-ey-adi-tridiagonal}, and \eqref{eq:second-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-second-hy-pml}, \eqref{eq:adi-second-hz-pml}, and \eqref{eq:adi-second-hx-pml} reduce to \eqref{eq:adi-second-hy}, \eqref{eq:adi-second-hz}, and \eqref{eq:adi-second-hx}.
+When the PML is disabled, or equivalently when $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:second-e-ex-pml-adi-tridiagonal}, \eqref{eq:second-e-ey-pml-adi-tridiagonal}, and \eqref{eq:second-e-ez-pml-adi-tridiagonal} reduce to \eqref{eq:second-e-ex-adi-tridiagonal}, \eqref{eq:second-e-ey-adi-tridiagonal}, and \eqref{eq:second-e-ez-adi-tridiagonal}, respectively. Likewise, \eqref{eq:adi-second-hy-pml}, \eqref{eq:adi-second-hz-pml}, and \eqref{eq:adi-second-hx-pml} reduce to \eqref{eq:adi-second-hy}, \eqref{eq:adi-second-hz}, and \eqref{eq:adi-second-hx}.
 
 \subsection{Second PML Auxiliary Variable Half-Step}
 
-The PML auxiliary variables are advanced over the second half-step from time level $n+\tfrac12$ to $n+1$. The notation for $\psi_{e\alpha s}$ and $\psi_{h\beta s}$ is the same as in the first PML auxiliary-variable half-step. The explicit electric auxiliary variables $\psi_{exy}$, $\psi_{eyz}$, and $\psi_{ezx}$ are updated from $H^{n+\frac12}$ before the electric solve. The explicit magnetic auxiliary variables $\psi_{hzy}$, $\psi_{hxz}$, and $\psi_{hyx}$ are updated from $E^{n+\frac12}$ at the same point. After the electric solve, $\psi_{hyz}$, $\psi_{hzx}$, and $\psi_{hxy}$ are updated from $E^{n+1}$ and used in the magnetic update. The magnetic field is then obtained from $B^{n+1}/\mu$, and $\psi_{exz}$, $\psi_{eyx}$, and $\psi_{ezy}$ are updated from that field.
+The PML auxiliary variables advance from time level $n+\tfrac12$ to $n+1$ only after $E^{n+1}$ and $B^{n+1}$ are known. The explicit magnetic auxiliaries $\psi_{hzy}$, $\psi_{hxz}$, and $\psi_{hyx}$ are updated from $E^{n+\frac12}$. The implicit magnetic auxiliaries $\psi_{hyz}$, $\psi_{hzx}$, and $\psi_{hxy}$ are updated from $E^{n+1}$. The explicit electric auxiliaries $\psi_{exy}$, $\psi_{eyz}$, and $\psi_{ezx}$ are updated from $H^{n+\frac12}$, and the implicit electric auxiliaries $\psi_{exz}$, $\psi_{eyx}$, and $\psi_{ezy}$ are updated from $H^{n+1}=B^{n+1}/\mu$.
 
 The magnetic auxiliary variables are stored in the unscaled recursive-convolution form. Consequently, $D_b$ is applied at the same staggered location as the corresponding magnetic field, both in the direct magnetic update and in the magnetic terms eliminated into the electric right-hand side.
 
