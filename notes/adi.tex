@@ -998,12 +998,12 @@ The PML auxiliary variables are advanced over the first half-step from time leve
 The electric auxiliary variables are updated from the magnetic fields at time level $n$,
 \begin{subequations}\label{eq:first-pml-aux-e}
     \begin{align}
-        \psi_{exy,i+\tfrac12,j,k}^{n+\frac12} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}}{\Delta y}, \\
-        \psi_{exz,i+\tfrac12,j,k}^{n+\frac12} & = b_{z,i+\tfrac12,j,k}\,\psi_{exz,i+\tfrac12,j,k}^{n} +a_{z,i+\tfrac12,j,k} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}}{\Delta z}, \\
-        \psi_{eyx,i,j+\tfrac12,k}^{n+\frac12} & = b_{x,i,j+\tfrac12,k}\,\psi_{eyx,i,j+\tfrac12,k}^{n} +a_{x,i,j+\tfrac12,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i-\tfrac12,j+\tfrac12,k}^{n}}{\Delta x}, \\
-        \psi_{eyz,i,j+\tfrac12,k}^{n+\frac12} & = b_{z,i,j+\tfrac12,k}\,\psi_{eyz,i,j+\tfrac12,k}^{n} +a_{z,i,j+\tfrac12,k} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n}-H_{x,i,j+\tfrac12,k-\tfrac12}^{n}}{\Delta z}, \\
-        \psi_{ezx,i,j,k+\tfrac12}^{n+\frac12} & = b_{x,i,j,k+\tfrac12}\,\psi_{ezx,i,j,k+\tfrac12}^{n} +a_{x,i,j,k+\tfrac12} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i-\tfrac12,j,k+\tfrac12}^{n}}{\Delta x}, \\
-        \psi_{ezy,i,j,k+\tfrac12}^{n+\frac12} & = b_{y,i,j,k+\tfrac12}\,\psi_{ezy,i,j,k+\tfrac12}^{n} +a_{y,i,j,k+\tfrac12} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n}-H_{x,i,j-\tfrac12,k+\tfrac12}^{n}}{\Delta y}.
+        \psi_{exy,i+\tfrac12,j,k}^{n+\frac12} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+\frac12}}{\Delta y}, \\
+        \psi_{exz,i+\tfrac12,j,k}^{n+\frac12} & = b_{z,i+\tfrac12,j,k}\,\psi_{exz,i+\tfrac12,j,k}^{n} +a_{z,i+\tfrac12,j,k} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+\frac12}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n+\frac12}}{\Delta z}, \\
+        \psi_{eyx,i,j+\tfrac12,k}^{n+\frac12} & = b_{x,i,j+\tfrac12,k}\,\psi_{eyx,i,j+\tfrac12,k}^{n} +a_{x,i,j+\tfrac12,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i-\tfrac12,j+\tfrac12,k}^{n+\frac12}}{\Delta x}, \\
+        \psi_{eyz,i,j+\tfrac12,k}^{n+\frac12} & = b_{z,i,j+\tfrac12,k}\,\psi_{eyz,i,j+\tfrac12,k}^{n} +a_{z,i,j+\tfrac12,k} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+\frac12}-H_{x,i,j+\tfrac12,k-\tfrac12}^{n+\frac12}}{\Delta z}, \\
+        \psi_{ezx,i,j,k+\tfrac12}^{n+\frac12} & = b_{x,i,j,k+\tfrac12}\,\psi_{ezx,i,j,k+\tfrac12}^{n} +a_{x,i,j,k+\tfrac12} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+\frac12}-H_{y,i-\tfrac12,j,k+\tfrac12}^{n+\frac12}}{\Delta x}, \\
+        \psi_{ezy,i,j,k+\tfrac12}^{n+\frac12} & = b_{y,i,j,k+\tfrac12}\,\psi_{ezy,i,j,k+\tfrac12}^{n} +a_{y,i,j,k+\tfrac12} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+\frac12}-H_{x,i,j-\tfrac12,k+\tfrac12}^{n+\frac12}}{\Delta y}.
     \end{align}
 \end{subequations}
 The PML recursion coefficients are,
@@ -1039,11 +1039,11 @@ The maximum conductivity may be chosen from a target reflection coefficient $R$ 
 The magnetic auxiliary variables are updated from the electric fields at the time levels used by the first-half ADI magnetic updates,
 \begin{subequations}\label{eq:first-pml-aux-h}
     \begin{align}
-        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n}-E_{z,i,j,k+\tfrac12}^{n}}{\Delta y},                 \\
+        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta y},                 \\
         \psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{z,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n} +a_{z,i,j+\tfrac12,k+\tfrac12} \frac{E_{y,i,j+\tfrac12,k+1}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta z}, \\
         \psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{x,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n} +a_{x,i+\tfrac12,j,k+\tfrac12} \frac{E_{z,i+1,j,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta x}, \\
-        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n}-E_{x,i+\tfrac12,j,k}^{n}}{\Delta z},                 \\
-        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}}{\Delta x},                 \\
+        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta z},                 \\
+        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta x},                 \\
         \psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{y,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n} +a_{y,i+\tfrac12,j+\tfrac12,k} \frac{E_{x,i+\tfrac12,j+1,k}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta y}.
     \end{align}
 \end{subequations}
@@ -1189,12 +1189,12 @@ The PML auxiliary variables are advanced over the second half-step from time lev
 The electric auxiliary variables are updated from the magnetic fields at time level $n+\tfrac12$,
 \begin{subequations}\label{eq:second-pml-aux-e}
     \begin{align}
-        \psi_{exy,i+\tfrac12,j,k}^{n+1} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n+\frac12} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+\frac12}}{\Delta y}, \\
-        \psi_{exz,i+\tfrac12,j,k}^{n+1} & = b_{z,i+\tfrac12,j,k}\,\psi_{exz,i+\tfrac12,j,k}^{n+\frac12} +a_{z,i+\tfrac12,j,k} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+\frac12}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n+\frac12}}{\Delta z}, \\
-        \psi_{eyx,i,j+\tfrac12,k}^{n+1} & = b_{x,i,j+\tfrac12,k}\,\psi_{eyx,i,j+\tfrac12,k}^{n+\frac12} +a_{x,i,j+\tfrac12,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i-\tfrac12,j+\tfrac12,k}^{n+\frac12}}{\Delta x}, \\
-        \psi_{eyz,i,j+\tfrac12,k}^{n+1} & = b_{z,i,j+\tfrac12,k}\,\psi_{eyz,i,j+\tfrac12,k}^{n+\frac12} +a_{z,i,j+\tfrac12,k} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+\frac12}-H_{x,i,j+\tfrac12,k-\tfrac12}^{n+\frac12}}{\Delta z}, \\
-        \psi_{ezx,i,j,k+\tfrac12}^{n+1} & = b_{x,i,j,k+\tfrac12}\,\psi_{ezx,i,j,k+\tfrac12}^{n+\frac12} +a_{x,i,j,k+\tfrac12} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+\frac12}-H_{y,i-\tfrac12,j,k+\tfrac12}^{n+\frac12}}{\Delta x}, \\
-        \psi_{ezy,i,j,k+\tfrac12}^{n+1} & = b_{y,i,j,k+\tfrac12}\,\psi_{ezy,i,j,k+\tfrac12}^{n+\frac12} +a_{y,i,j,k+\tfrac12} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+\frac12}-H_{x,i,j-\tfrac12,k+\tfrac12}^{n+\frac12}}{\Delta y}.
+        \psi_{exy,i+\tfrac12,j,k}^{n+1} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n+\frac12} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+1}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+1}}{\Delta y}, \\
+        \psi_{exz,i+\tfrac12,j,k}^{n+1} & = b_{z,i+\tfrac12,j,k}\,\psi_{exz,i+\tfrac12,j,k}^{n+\frac12} +a_{z,i+\tfrac12,j,k} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+1}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n+1}}{\Delta z}, \\
+        \psi_{eyx,i,j+\tfrac12,k}^{n+1} & = b_{x,i,j+\tfrac12,k}\,\psi_{eyx,i,j+\tfrac12,k}^{n+\frac12} +a_{x,i,j+\tfrac12,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+1}-H_{z,i-\tfrac12,j+\tfrac12,k}^{n+1}}{\Delta x}, \\
+        \psi_{eyz,i,j+\tfrac12,k}^{n+1} & = b_{z,i,j+\tfrac12,k}\,\psi_{eyz,i,j+\tfrac12,k}^{n+\frac12} +a_{z,i,j+\tfrac12,k} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+1}-H_{x,i,j+\tfrac12,k-\tfrac12}^{n+1}}{\Delta z}, \\
+        \psi_{ezx,i,j,k+\tfrac12}^{n+1} & = b_{x,i,j,k+\tfrac12}\,\psi_{ezx,i,j,k+\tfrac12}^{n+\frac12} +a_{x,i,j,k+\tfrac12} \frac{H_{y,i+\tfrac12,j,k+\tfrac12}^{n+1}-H_{y,i-\tfrac12,j,k+\tfrac12}^{n+1}}{\Delta x}, \\
+        \psi_{ezy,i,j,k+\tfrac12}^{n+1} & = b_{y,i,j,k+\tfrac12}\,\psi_{ezy,i,j,k+\tfrac12}^{n+\frac12} +a_{y,i,j,k+\tfrac12} \frac{H_{x,i,j+\tfrac12,k+\tfrac12}^{n+1}-H_{x,i,j-\tfrac12,k+\tfrac12}^{n+1}}{\Delta y}.
     \end{align}
 \end{subequations}
 The PML recursion coefficients are given by \eqref{eq:first-pml-aux-coefficients}.
@@ -1203,10 +1203,10 @@ The magnetic auxiliary variables are updated from the electric fields at the tim
 \begin{subequations}\label{eq:second-pml-aux-h}
     \begin{align}
         \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta y},             \\
-        \psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{z,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{z,i,j+\tfrac12,k+\tfrac12} \frac{E_{y,i,j+\tfrac12,k+1}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta z}, \\
-        \psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{x,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{x,i+\tfrac12,j,k+\tfrac12} \frac{E_{z,i+1,j,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta x}, \\
-        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta z}, \\
-        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+1} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta x}, \\
+        \psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{z,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{z,i,j+\tfrac12,k+\tfrac12} \frac{E_{y,i,j+\tfrac12,k+1}^{n+1}-E_{y,i,j+\tfrac12,k}^{n+1}}{\Delta z}, \\
+        \psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{x,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{x,i+\tfrac12,j,k+\tfrac12} \frac{E_{z,i+1,j,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta x}, \\
+        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+1}-E_{x,i+\tfrac12,j,k}^{n+1}}{\Delta z}, \\
+        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+1} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n+1}-E_{y,i,j+\tfrac12,k}^{n+1}}{\Delta x}, \\
         \psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n+1} & = b_{y,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} +a_{y,i+\tfrac12,j+\tfrac12,k} \frac{E_{x,i+\tfrac12,j+1,k}^{n+1}-E_{x,i+\tfrac12,j,k}^{n+1}}{\Delta y}.
     \end{align}
 \end{subequations}
