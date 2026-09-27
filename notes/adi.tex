@@ -870,9 +870,9 @@ Using the same formulation as \eqref{eq:first-e-ex-adi-tridiagonal}, the PML tri
          & \quad -\frac{1}{\kappa_{z,i+\tfrac12,j,k}\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big)                                \\
          & \quad +\frac{q_{x1}}{\kappa_{y,i+\tfrac12,j,k}\kappa_{x,i+\tfrac12,j-\tfrac12,k}\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big) \\
          & \quad -\frac{r_{x1}}{\kappa_{y,i+\tfrac12,j,k}\kappa_{x,i+\tfrac12,j+\tfrac12,k}\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big) \\
-         & \quad -\frac{r_{x1}}{\kappa_{y,i+\tfrac12,j,k}\Delta y}\Big(\psi^{n}_{h\,zy,i+\tfrac12,j+\tfrac12,k} - \psi^{n}_{h\,zx,i+\tfrac12,j+\tfrac12,k}\Big)           \\
-         & \quad +\frac{q_{x1}}{\kappa_{y,i+\tfrac12,j,k}\Delta y}\Big(\psi^{n}_{h\,zy,i+\tfrac12,j-\tfrac12,k} - \psi^{n}_{h\,zx,i+\tfrac12,j-\tfrac12,k}\Big)           \\
-         & \quad +\Big(\psi^{n}_{e\,xz,i+\tfrac12,j,k}-\psi^{n}_{e\,xy,i+\tfrac12,j,k}\Big).
+         & \quad +\frac{r_{x1}}{\kappa_{y,i+\tfrac12,j,k}\Delta y}\Big(\psi^{n}_{h\,zy,i+\tfrac12,j+\tfrac12,k} - \psi^{n}_{h\,zx,i+\tfrac12,j+\tfrac12,k}\Big)           \\
+         & \quad -\frac{q_{x1}}{\kappa_{y,i+\tfrac12,j,k}\Delta y}\Big(\psi^{n}_{h\,zy,i+\tfrac12,j-\tfrac12,k} - \psi^{n}_{h\,zx,i+\tfrac12,j-\tfrac12,k}\Big)           \\
+         & \quad +\Big(\psi^{n}_{e\,xy,i+\tfrac12,j,k}-\psi^{n}_{e\,xz,i+\tfrac12,j,k}\Big).
     \end{split}
     \label{eq:first-e-ex-pml-adi-tridiagonal}
 \end{align}
@@ -913,9 +913,9 @@ Using the same formulation as \eqref{eq:first-e-ey-adi-tridiagonal}, the PML tri
          & \quad -\frac{1}{\kappa_{x,i,j+\tfrac12,k}\Delta x}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i-\tfrac12,j+\tfrac12,k}^{n}\Big)                                \\
          & \quad +\frac{q_{y1}}{\kappa_{z,i,j+\tfrac12,k}\kappa_{y,i,j+\tfrac12,k-\tfrac12}\Delta y\Delta z}\Big(E_{z,i,j+1,k-\tfrac12}^{n}-E_{z,i,j,k-\tfrac12}^{n}\Big) \\
          & \quad -\frac{r_{y1}}{\kappa_{z,i,j+\tfrac12,k}\kappa_{y,i,j+\tfrac12,k+\tfrac12}\Delta y\Delta z}\Big(E_{z,i,j+1,k+\tfrac12}^{n}-E_{z,i,j,k+\tfrac12}^{n}\Big) \\
-         & \quad -\frac{r_{y1}}{\kappa_{z,i,j+\tfrac12,k}\Delta z}\Big(\psi^{n}_{h\,xz,i,j+\tfrac12,k+\tfrac12} - \psi^{n}_{h\,xy,i,j+\tfrac12,k+\tfrac12}\Big)           \\
-         & \quad +\frac{q_{y1}}{\kappa_{z,i,j+\tfrac12,k}\Delta z}\Big(\psi^{n}_{h\,xz,i,j+\tfrac12,k-\tfrac12} - \psi^{n}_{h\,xy,i,j+\tfrac12,k-\tfrac12}\Big)           \\
-         & \quad +\Big(\psi^{n}_{e\,yx,i,j+\tfrac12,k}-\psi^{n}_{e\,yz,i,j+\tfrac12,k}\Big).
+         & \quad +\frac{r_{y1}}{\kappa_{z,i,j+\tfrac12,k}\Delta z}\Big(\psi^{n}_{h\,xz,i,j+\tfrac12,k+\tfrac12} - \psi^{n}_{h\,xy,i,j+\tfrac12,k+\tfrac12}\Big)           \\
+         & \quad -\frac{q_{y1}}{\kappa_{z,i,j+\tfrac12,k}\Delta z}\Big(\psi^{n}_{h\,xz,i,j+\tfrac12,k-\tfrac12} - \psi^{n}_{h\,xy,i,j+\tfrac12,k-\tfrac12}\Big)           \\
+         & \quad +\Big(\psi^{n}_{e\,yz,i,j+\tfrac12,k}-\psi^{n}_{e\,yx,i,j+\tfrac12,k}\Big).
     \end{split}
     \label{eq:first-e-ey-pml-adi-tridiagonal}
 \end{align}
@@ -956,9 +956,9 @@ Using the same formulation as \eqref{eq:first-e-ez-adi-tridiagonal}, the PML tri
          & \quad -\frac{1}{\kappa_{y,i,j,k+\tfrac12}\Delta y}\Big(H_{x,i,j+\tfrac12,k+\tfrac12}^{n}-H_{x,i,j-\tfrac12,k+\tfrac12}^{n}\Big)                                \\
          & \quad +\frac{q_{z1}}{\kappa_{x,i,j,k+\tfrac12}\kappa_{z,i-\tfrac12,j,k+\tfrac12}\Delta z\Delta x}\Big(E_{x,i-\tfrac12,j,k+1}^{n}-E_{x,i-\tfrac12,j,k}^{n}\Big) \\
          & \quad -\frac{r_{z1}}{\kappa_{x,i,j,k+\tfrac12}\kappa_{z,i+\tfrac12,j,k+\tfrac12}\Delta z\Delta x}\Big(E_{x,i+\tfrac12,j,k+1}^{n}-E_{x,i+\tfrac12,j,k}^{n}\Big) \\
-         & \quad -\frac{r_{z1}}{\kappa_{x,i,j,k+\tfrac12}\Delta x}\Big(\psi^{n}_{h\,yx,i+\tfrac12,j,k+\tfrac12} - \psi^{n}_{h\,yz,i+\tfrac12,j,k+\tfrac12}\Big)           \\
-         & \quad +\frac{q_{z1}}{\kappa_{x,i,j,k+\tfrac12}\Delta x}\Big(\psi^{n}_{h\,yx,i-\tfrac12,j,k+\tfrac12} - \psi^{n}_{h\,yz,i-\tfrac12,j,k+\tfrac12}\Big)           \\
-         & \quad +\Big(\psi^{n}_{e\,zy,i,j,k+\tfrac12}-\psi^{n}_{e\,zx,i,j,k+\tfrac12}\Big).
+         & \quad +\frac{r_{z1}}{\kappa_{x,i,j,k+\tfrac12}\Delta x}\Big(\psi^{n}_{h\,yx,i+\tfrac12,j,k+\tfrac12} - \psi^{n}_{h\,yz,i+\tfrac12,j,k+\tfrac12}\Big)           \\
+         & \quad -\frac{q_{z1}}{\kappa_{x,i,j,k+\tfrac12}\Delta x}\Big(\psi^{n}_{h\,yx,i-\tfrac12,j,k+\tfrac12} - \psi^{n}_{h\,yz,i-\tfrac12,j,k+\tfrac12}\Big)           \\
+         & \quad +\Big(\psi^{n}_{e\,zx,i,j,k+\tfrac12}-\psi^{n}_{e\,zy,i,j,k+\tfrac12}\Big).
     \end{split}
     \label{eq:first-e-ez-pml-adi-tridiagonal}
 \end{align}
@@ -995,7 +995,7 @@ If $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:firs
 
 The PML auxiliary variables are advanced over the first half-step from time level $n$ to $n+\tfrac12$. In this subsection, $\psi_{e\alpha s}$ denotes the electric auxiliary variable for the $\partial/\partial s$ derivative in the $E_\alpha$ update, and $\psi_{h\alpha s}$ denotes the magnetic auxiliary variable for the $\partial/\partial s$ derivative in the $H_\alpha$ update. Thus, for example, $\psi_{exy}$ and $\psi_{exz}$ correspond to the $y$- and $z$-derivative auxiliary variables in the $E_x$ equation, respectively.
 
-The electric auxiliary variables are updated from the magnetic fields at time level $n$,
+The electric auxiliary variables are updated from the completed magnetic fields at time level $n+\tfrac12$,
 \begin{subequations}\label{eq:first-pml-aux-e}
     \begin{align}
         \psi_{exy,i+\tfrac12,j,k}^{n+\frac12} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+\frac12}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+\frac12}}{\Delta y}, \\
@@ -1036,7 +1036,7 @@ The maximum conductivity may be chosen from a target reflection coefficient $R$ 
     \eta_0=\sqrt{\frac{\mu_0}{\varepsilon_0}}.
 \end{equation}
 
-The magnetic auxiliary variables are updated from the electric fields at the time levels used by the first-half ADI magnetic updates,
+The magnetic auxiliary variables are updated from the completed electric fields at time level $n+\tfrac12$. Both field updates use the auxiliary variables at time level $n$ before these recursions are applied,
 \begin{subequations}\label{eq:first-pml-aux-h}
     \begin{align}
         \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta y},                 \\
@@ -1063,7 +1063,7 @@ Using the same formulation as \eqref{eq:second-e-ex-adi-tridiagonal}, the PML tr
          & \quad -\frac{r_{x2}}{\kappa_{z,i+\tfrac12,j,k}\kappa_{x,i+\tfrac12,j,k+\tfrac12}\Delta x\Delta z}\Big(E_{z,i+1,j,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}\Big) \\
          & \quad -\frac{r_{x2}}{\kappa_{z,i+\tfrac12,j,k}\Delta z}\Big(\psi^{n+\frac12}_{h\,yx,i+\tfrac12,j,k+\tfrac12} - \psi^{n+\frac12}_{h\,yz,i+\tfrac12,j,k+\tfrac12}\Big)           \\
          & \quad +\frac{q_{x2}}{\kappa_{z,i+\tfrac12,j,k}\Delta z}\Big(\psi^{n+\frac12}_{h\,yx,i+\tfrac12,j,k-\tfrac12} - \psi^{n+\frac12}_{h\,yz,i+\tfrac12,j,k-\tfrac12}\Big)           \\
-         & \quad +\Big(\psi^{n+\frac12}_{e\,xz,i+\tfrac12,j,k}-\psi^{n+\frac12}_{e\,xy,i+\tfrac12,j,k}\Big).
+         & \quad +\Big(\psi^{n+\frac12}_{e\,xy,i+\tfrac12,j,k}-\psi^{n+\frac12}_{e\,xz,i+\tfrac12,j,k}\Big).
     \end{split}
     \label{eq:second-e-ex-pml-adi-tridiagonal}
 \end{align}
@@ -1106,7 +1106,7 @@ Using the same formulation as \eqref{eq:second-e-ey-adi-tridiagonal}, the PML tr
          & \quad -\frac{r_{y2}}{\kappa_{x,i,j+\tfrac12,k}\kappa_{y,i+\tfrac12,j+\tfrac12,k}\Delta y\Delta x}\Big(E_{x,i+\tfrac12,j+1,k}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}\Big) \\
          & \quad -\frac{r_{y2}}{\kappa_{x,i,j+\tfrac12,k}\Delta x}\Big(\psi^{n+\frac12}_{h\,zy,i+\tfrac12,j+\tfrac12,k} - \psi^{n+\frac12}_{h\,zx,i+\tfrac12,j+\tfrac12,k}\Big)           \\
          & \quad +\frac{q_{y2}}{\kappa_{x,i,j+\tfrac12,k}\Delta x}\Big(\psi^{n+\frac12}_{h\,zy,i-\tfrac12,j+\tfrac12,k} - \psi^{n+\frac12}_{h\,zx,i-\tfrac12,j+\tfrac12,k}\Big)           \\
-         & \quad +\Big(\psi^{n+\frac12}_{e\,yx,i,j+\tfrac12,k}-\psi^{n+\frac12}_{e\,yz,i,j+\tfrac12,k}\Big).
+         & \quad +\Big(\psi^{n+\frac12}_{e\,yz,i,j+\tfrac12,k}-\psi^{n+\frac12}_{e\,yx,i,j+\tfrac12,k}\Big).
     \end{split}
     \label{eq:second-e-ey-pml-adi-tridiagonal}
 \end{align}
@@ -1149,7 +1149,7 @@ Using the same formulation as \eqref{eq:second-e-ez-adi-tridiagonal}, the PML tr
          & \quad -\frac{r_{z2}}{\kappa_{y,i,j,k+\tfrac12}\kappa_{z,i,j+\tfrac12,k+\tfrac12}\Delta z\Delta y}\Big(E_{y,i,j+\tfrac12,k+1}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}\Big) \\
          & \quad -\frac{r_{z2}}{\kappa_{y,i,j,k+\tfrac12}\Delta y}\Big(\psi^{n+\frac12}_{h\,xz,i,j+\tfrac12,k+\tfrac12} - \psi^{n+\frac12}_{h\,xy,i,j+\tfrac12,k+\tfrac12}\Big)           \\
          & \quad +\frac{q_{z2}}{\kappa_{y,i,j,k+\tfrac12}\Delta y}\Big(\psi^{n+\frac12}_{h\,xz,i,j-\tfrac12,k+\tfrac12} - \psi^{n+\frac12}_{h\,xy,i,j-\tfrac12,k+\tfrac12}\Big)           \\
-         & \quad +\Big(\psi^{n+\frac12}_{e\,zy,i,j,k+\tfrac12}-\psi^{n+\frac12}_{e\,zx,i,j,k+\tfrac12}\Big).
+         & \quad +\Big(\psi^{n+\frac12}_{e\,zx,i,j,k+\tfrac12}-\psi^{n+\frac12}_{e\,zy,i,j,k+\tfrac12}\Big).
     \end{split}
     \label{eq:second-e-ez-pml-adi-tridiagonal}
 \end{align}
@@ -1186,7 +1186,7 @@ If $\kappa_s=1$ and all PML auxiliary variables vanish, equations \eqref{eq:seco
 
 The PML auxiliary variables are advanced over the second half-step from time level $n+\tfrac12$ to $n+1$. The notation for $\psi_{e\alpha s}$ and $\psi_{h\alpha s}$ is the same as in the first PML auxiliary-variable half-step.
 
-The electric auxiliary variables are updated from the magnetic fields at time level $n+\tfrac12$,
+The electric auxiliary variables are updated from the completed magnetic fields at time level $n+1$,
 \begin{subequations}\label{eq:second-pml-aux-e}
     \begin{align}
         \psi_{exy,i+\tfrac12,j,k}^{n+1} & = b_{y,i+\tfrac12,j,k}\,\psi_{exy,i+\tfrac12,j,k}^{n+\frac12} +a_{y,i+\tfrac12,j,k} \frac{H_{z,i+\tfrac12,j+\tfrac12,k}^{n+1}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n+1}}{\Delta y}, \\
@@ -1199,7 +1199,7 @@ The electric auxiliary variables are updated from the magnetic fields at time le
 \end{subequations}
 The PML recursion coefficients are given by \eqref{eq:first-pml-aux-coefficients}.
 
-The magnetic auxiliary variables are updated from the electric fields at the time levels used by the second-half ADI magnetic updates,
+The magnetic auxiliary variables are updated from the completed electric fields at time level $n+1$. Both field updates use the auxiliary variables at time level $n+\tfrac12$ before these recursions are applied,
 \begin{subequations}\label{eq:second-pml-aux-h}
     \begin{align}
         \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta y},             \\
