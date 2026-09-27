@@ -1769,4 +1769,70 @@ with the known current inserted only as a right-hand-side source, leaves $\omega
 
 In the current Artemis macroscopic ADI push, soft electric sources are added to the ADI right-hand side, but $\mathbf{J}_\mathrm{L}$ is not. The inductor object still advances $\mathbf{J}_\mathrm{L}$ explicitly when enabled, yet that current is unused by \texttt{MacroscopicEvolveADI}. A stable ADI inductor therefore requires: (i)~replace $C_a,C_b$ by $C_a^{L},C_b^{L}$ on inductor edges; (ii)~add $-C_b^{L}J_{\mathrm{L}}^{\mathrm{old}}$ to the field-update form, or equivalently $-J_{\mathrm{L}}^{\mathrm{old}}$ to the normalized tridiagonal right-hand side; and (iii)~update $J_{\mathrm{L}}$ with \eqref{eq:inductor-j-semi} after each electric solve.
 
+\section{Lumped Resistance}
+
+A lumped resistor on a Yee edge is an Ohmic current in parallel with the bulk conductivity. Unlike the inductor, it adds no auxiliary unknown and no further timestep restriction: the resistance is absorbed into the edge conductivity already present in the ADI half-step coefficients, and both half-steps use that conductivity. Zero resistance is the input convention for no resistor, not a short circuit.
+
+\subsection{Continuum model}
+
+For an electric-field edge in direction $d$, let $\ell_d$ be its length and $A_d$ its transverse area. The resistor adds the current density
+\begin{equation}\label{eq:resistor-current}
+    J_{R,d}
+    = \frac{V_d}{R_d A_d}
+    = \frac{\ell_d}{R_d A_d}\,E_d.
+\end{equation}
+Thus the conductivity used by ADI is
+\begin{equation}\label{eq:resistor-sigma-eff}
+    \sigma_{\mathrm{eff},d}
+    = \sigma_{\mathrm{bulk},d}
+    + \begin{cases}
+        \ell_d/(R_d A_d), & R_d>0, \\
+        0,                & R_d=0.
+    \end{cases}
+\end{equation}
+Here $\sigma_{\mathrm{bulk},d}$ is interpolated to the edge. The directional geometry factors are
+\begin{equation}\label{eq:resistor-geometry}
+    \frac{\ell_x}{A_x} = \frac{\Delta x}{\Delta y\,\Delta z},
+    \qquad
+    \frac{\ell_y}{A_y} = \frac{\Delta y}{\Delta x\,\Delta z},
+    \qquad
+    \frac{\ell_z}{A_z} = \frac{\Delta z}{\Delta x\,\Delta y}.
+\end{equation}
+The electric-field equation then includes both parallel losses,
+\begin{equation}\label{eq:resistor-ampere}
+    \varepsilon_d\frac{\partial E_d}{\partial t}
+    = (\nabla\times\mathbf{H})_d
+    - J_{\mathrm{other},d}
+    - \sigma_{\mathrm{eff},d} E_d.
+\end{equation}
+Faraday's law is unmodified, so the magnetic ADI updates are unchanged. The current $J_{\mathrm{other},d}$ collects every contribution other than this Ohmic term, including the lumped-inductor current on an edge that also carries an inductor. Away from resistor edges one takes $R_d=0$, so $\sigma_{\mathrm{eff},d}=\sigma_{\mathrm{bulk},d}$ and no resistor current is stored.
+
+\subsection{Half-step coefficients}
+
+Over a half step of size $\Delta t/2$, the centered conductivity average of Section~3 is unchanged in form: $\sigma$ is replaced by $\sigma_{\mathrm{eff},d}$. If the same edge also carries an inductor, the contribution $\Delta t\,\kappa/8$ inside \eqref{eq:adi-half-coefficients-inductor} remains; clearing the common factor $2/\Delta t$ writes it as $\tfrac14\kappa_d\Delta t^2$. The two coefficients that enter the electric update are therefore
+\begin{equation}\label{eq:resistor-cb}
+    C_{b,d}
+    = \frac{2\Delta t}
+    {4\varepsilon_d + \sigma_{\mathrm{eff},d}\,\Delta t + \tfrac14\kappa_d\Delta t^2},
+\end{equation}
+\begin{equation}\label{eq:resistor-p}
+    p_d
+    = \frac{4\varepsilon_d - \sigma_{\mathrm{eff},d}\,\Delta t - \tfrac14\kappa_d\Delta t^2}
+    {2\Delta t}.
+\end{equation}
+Here $\kappa_d=\ell_d/(A_d L_d)$ is the lumped-inductor coefficient \eqref{eq:inductor-kappa}, or $\kappa_d=0$ when the edge has no inductor. These are the half-step pair $C_b$ and $p=C_a/C_b$, so the companion factor is $C_{a,d}=p_d C_{b,d}$. When $R_d=0$ and $\kappa_d=0$, they reduce to \eqref{eq:adi-half-coefficients} with $\sigma=\sigma_{\mathrm{bulk},d}$. When $R_d=0$ but $\kappa_d\neq 0$, they reduce to \eqref{eq:adi-half-coefficients-inductor}.
+
+Both ADI half-steps use \eqref{eq:resistor-cb} and \eqref{eq:resistor-p}. The remaining update equations are unchanged.
+
+\subsection{Effect on the ADI tridiagonal system}
+
+The magnetic update is identical to Section~3. In the first $E_x$ system the stencil is that of \eqref{eq:first-e-ex-adi-tridiagonal}, or of \eqref{eq:first-e-ex-adi-tridiagonal-inductor} when the edge also carries an inductor. Only the diagonal and the old-field factor change,
+\begin{align}
+    \beta_{x1}
+     & = \frac{1}{C_{b,x,i+\tfrac12,j,k}} + \alpha_{x1} + \gamma_{x1}, \\
+    p_{x1}
+     & = p_{x,i+\tfrac12,j,k},
+\end{align}
+while $\alpha_{x1}$, $\gamma_{x1}$, $q_{x1}$, and $r_{x1}$ are unchanged, because they come only from the implicit curl of $H$. The $-J_{\mathrm{L},x}^{n}$ term is present only on inductor edges. The $E_y$ and $E_z$ systems, and the second half-step, are modified in the same way.
+
 \end{document}
