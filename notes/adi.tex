@@ -1040,11 +1040,11 @@ The maximum conductivity may be chosen from a target reflection coefficient $R$ 
 The magnetic auxiliary variables are updated from the completed electric fields at time level $n+\tfrac12$. Both field updates use the auxiliary variables at time level $n$ before these recursions are applied,
 \begin{subequations}\label{eq:first-pml-aux-h}
     \begin{align}
-        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta y},                 \\
+        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta y}, \\
         \psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} & = b_{z,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n} +a_{z,i,j+\tfrac12,k+\tfrac12} \frac{E_{y,i,j+\tfrac12,k+1}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta z}, \\
         \psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{x,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n} +a_{x,i+\tfrac12,j,k+\tfrac12} \frac{E_{z,i+1,j,k+\tfrac12}^{n+\frac12}-E_{z,i,j,k+\tfrac12}^{n+\frac12}}{\Delta x}, \\
-        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta z},                 \\
-        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta x},                 \\
+        \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta z}, \\
+        \psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{x,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzx,i+\tfrac12,j+\tfrac12,k}^{n} +a_{x,i+\tfrac12,j+\tfrac12,k} \frac{E_{y,i+1,j+\tfrac12,k}^{n+\frac12}-E_{y,i,j+\tfrac12,k}^{n+\frac12}}{\Delta x}, \\
         \psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n+\frac12} & = b_{y,i+\tfrac12,j+\tfrac12,k}\,\psi_{hzy,i+\tfrac12,j+\tfrac12,k}^{n} +a_{y,i+\tfrac12,j+\tfrac12,k} \frac{E_{x,i+\tfrac12,j+1,k}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n+\frac12}}{\Delta y}.
     \end{align}
 \end{subequations}
@@ -1203,7 +1203,7 @@ The PML recursion coefficients are given by \eqref{eq:first-pml-aux-coefficients
 The magnetic auxiliary variables are updated from the completed electric fields at time level $n+1$. Both field updates use the auxiliary variables at time level $n+\tfrac12$ before these recursions are applied,
 \begin{subequations}\label{eq:second-pml-aux-h}
     \begin{align}
-        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta y},             \\
+        \psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{y,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxy,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{y,i,j+\tfrac12,k+\tfrac12} \frac{E_{z,i,j+1,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta y}, \\
         \psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+1} & = b_{z,i,j+\tfrac12,k+\tfrac12}\,\psi_{hxz,i,j+\tfrac12,k+\tfrac12}^{n+\frac12} +a_{z,i,j+\tfrac12,k+\tfrac12} \frac{E_{y,i,j+\tfrac12,k+1}^{n+1}-E_{y,i,j+\tfrac12,k}^{n+1}}{\Delta z}, \\
         \psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{x,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyx,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{x,i+\tfrac12,j,k+\tfrac12} \frac{E_{z,i+1,j,k+\tfrac12}^{n+1}-E_{z,i,j,k+\tfrac12}^{n+1}}{\Delta x}, \\
         \psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+1} & = b_{z,i+\tfrac12,j,k+\tfrac12}\,\psi_{hyz,i+\tfrac12,j,k+\tfrac12}^{n+\frac12} +a_{z,i+\tfrac12,j,k+\tfrac12} \frac{E_{x,i+\tfrac12,j,k+1}^{n+1}-E_{x,i+\tfrac12,j,k}^{n+1}}{\Delta z}, \\
@@ -1658,9 +1658,9 @@ Substituting into \eqref{eq:first-e-ex-inductor-semi} and collecting unknowns gi
 \begin{equation}
     E_{x}^{n+\frac12}
     = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}-\dfrac{\Delta t}{8}\kappa_x}
-           {\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_x}\,E_{x}^{n}
+    {\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_x}\,E_{x}^{n}
     + \frac{1}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_x}
-      \Bigl([H_1]-J_{\mathrm{L},x}^{n}\Bigr).
+    \Bigl([H_1]-J_{\mathrm{L},x}^{n}\Bigr).
 \end{equation}
 Define the inductor-modified half-step coefficients
 \begin{equation}\label{eq:adi-half-coefficients-inductor}
@@ -1722,7 +1722,7 @@ Then, we add a lumped resistor to the ADI electric update. A lumped resistor on 
 \begin{subequations}\label{eq:maxwell-resistor}
     \begin{align}
         \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{R}
-        \label{eq:maxwell-ampere-resistor}                                                                                        \\
+        \label{eq:maxwell-ampere-resistor}                                                                                          \\
         \nabla \times \mathbf{E} & = -\mu \frac{\partial \mathbf{H}}{\partial t}.
         \label{eq:maxwell-faraday-resistor}
     \end{align}
@@ -1768,7 +1768,7 @@ Then, we add a lumped capacitor to the ADI electric update. A lumped capacitor o
 \begin{subequations}\label{eq:maxwell-capacitor}
     \begin{align}
         \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{C}
-        \label{eq:maxwell-ampere-capacitor} \\
+        \label{eq:maxwell-ampere-capacitor}                                                                                         \\
         \nabla \times \mathbf{E} & = -\mu \frac{\partial \mathbf{H}}{\partial t}.
         \label{eq:maxwell-faraday-capacitor}
     \end{align}
@@ -1806,7 +1806,7 @@ Then, we add a Josephson junction to the ADI electric update. A Josephson juncti
 \begin{subequations}\label{eq:maxwell-josephson}
     \begin{align}
         \nabla \times \mathbf{H} & = \varepsilon \frac{\partial \mathbf{E}}{\partial t} + \sigma \mathbf{E} + \mathbf{J}_\mathrm{J}
-        \label{eq:maxwell-ampere-josephson} \\
+        \label{eq:maxwell-ampere-josephson}                                                                                         \\
         \nabla \times \mathbf{E} & = -\mu \frac{\partial \mathbf{H}}{\partial t}.
         \label{eq:maxwell-faraday-josephson}
     \end{align}
@@ -1820,8 +1820,7 @@ The junction follows the relationships
 \begin{equation}
     I = I_{c,x}\sin\phi_x, \qquad \frac{\partial\phi_x}{\partial t} = \frac{2e}{\hbar}V.
 \end{equation}
-Here $e>0$ is the elementary charge and $\phi_x$ is the gauge-invariant phase difference, oriented consistently with the edge voltage. The critical current $I_{c,x}$ is measured in amperes per selected edge, not in amperes per unit area. The voltage $E_x\Delta x$ is the one-edge approximation to the voltage integral.
-Substituting the current and voltage relationships into the junction constitutive relations, we get
+Here $e>0$ is the elementary charge and $\phi_x$ is the gauge-invariant phase difference, oriented consistently with the edge voltage. Substituting the current and voltage relationships into the junction constitutive relations, we get
 \begin{equation}\label{eq:josephson-constitutive}
     J_{\mathrm{J},x}\,\Delta y\,\Delta z = I_{c,x}\sin\phi_x, \qquad \frac{\partial\phi_x}{\partial t} = \frac{2e}{\hbar}\Delta x\,E_x.
 \end{equation}
@@ -1833,7 +1832,6 @@ and the constitutive relations become
 \begin{equation}\label{eq:josephson-phase}
     \frac{\partial\phi_x}{\partial t} = \eta_x E_x, \qquad J_{\mathrm{J},x} = j_{c,x}\sin\phi_x.
 \end{equation}
-For the resistively and capacitively shunted junction (RCSJ), place the resistor and capacitor on the same edge. Their contributions are absorbed into $\sigma_{\mathrm{eff},x}$ and $\varepsilon_{\mathrm{eff},x}$ from \eqref{eq:resistor-sigma-eff} and \eqref{eq:capacitor-epsilon-eff}. In the following electric equations, $\sigma$ and $\varepsilon$ denote these effective edge values; without shunts they denote the interpolated bulk values. No separate linear inductor is required for the Josephson branch.
 
 Over a half step of size $\Delta t/2$, discretize \eqref{eq:josephson-phase} by the trapezoidal rule,
 \begin{equation}\label{eq:josephson-trapezoidal}
@@ -1843,189 +1841,80 @@ Similarly as \eqref{eq:first-e-ex}, discretize \eqref{eq:maxwell-ampere-josephso
 \begin{equation}\label{eq:first-e-ex-josephson-semi}
     \varepsilon_{i+\tfrac12,j,k}\frac{E_{x,i+\tfrac12,j,k}^{n+\frac12}-E_{x,i+\tfrac12,j,k}^{n}}{\Delta t/2} + \sigma_{i+\tfrac12,j,k}\frac{E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}}{2} + \frac{J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12}+J_{\mathrm{J},x,i+\tfrac12,j,k}^{n}}{2} = [H_1],
 \end{equation}
-where $[H_1]$ is unchanged from \eqref{eq:first-h-1}. Define the averaged current as
-\begin{equation}
-    \overline{J}_{\mathrm{J},x}^{n} = \frac{J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12}+J_{\mathrm{J},x,i+\tfrac12,j,k}^{n}}{2}.
-\end{equation}
-From \eqref{eq:josephson-trapezoidal}, suppressing the spatial indices,
-\begin{equation}\label{eq:josephson-averaged-current}
-    \overline{J}_{\mathrm{J},x}^{n} = \frac{j_{c,x}}{2}\left\{\sin\phi_x^n+\sin\left[\phi_x^n+\frac{\Delta t}{4}\eta_x\left(E_x^{n+\frac12}+E_x^n\right)\right]\right\}.
+where $[H_1]$ is unchanged from \eqref{eq:first-h-1}.
+From \eqref{eq:josephson-trapezoidal},
+\begin{equation}\label{eq:josephson-current-phase}
+    J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12} = j_{c,x,i+\tfrac12,j,k}\sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\right)\right].
 \end{equation}
 
-Here the superscript $n$ labels the average over the half-step from $n$ to $n+\tfrac12$; $\overline{J}_{\mathrm{J},x}^{n}$ still depends on the unknown $E_x^{n+\frac12}$ and is not the instantaneous current $J_{\mathrm{J},x}^{n}$.
+Note that $J_{\mathrm{J},x}^{n+\frac12}$ depends on the unknown $E_x^{n+\frac12}$, and the unknown $E_x^{n+\frac12}$ is inside a sine function, so this is a nonlinear equation. We solve this nonlinear equation using the Newton update below.
 
-\subsection{Newton Update}
-
-Substituting \eqref{eq:josephson-averaged-current} into \eqref{eq:first-e-ex-josephson-semi} and collecting unknowns gives
-\begin{equation}
-    E_x^{n+\frac12} = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}}E_x^n + \frac{[H_1]-\overline{J}_{\mathrm{J},x}^{n}}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}}.
-\end{equation}
-Define the half-step coefficients with the effective material properties
-\begin{equation}\label{eq:adi-half-coefficients-josephson-newton}
-    C_a^N = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}}, \qquad C_b^N = \frac{1}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}}.
-\end{equation}
-When $I_{c,x}=0$ the Josephson current vanishes, and these coefficients give the existing RC electric update; without shunts they reduce to \eqref{eq:adi-half-coefficients}. The electric update is then
-\begin{equation}\label{eq:first-e-ex-adi-josephson-newton}
-    E_{x,i+\tfrac12,j,k}^{n+\frac12} = C_{a,i+\tfrac12,j,k}^N E_{x,i+\tfrac12,j,k}^{n} + C_{b,i+\tfrac12,j,k}^N\left([H_1]-\overline{J}_{\mathrm{J},x,i+\tfrac12,j,k}^{n}\right).
-\end{equation}
-Thus, compared with \eqref{eq:first-e-ex-adi}, the averaged current enters the electric equation as a local nonlinear function of the unknown field. Its appearance on the right-hand side does not make it a known source. After $E_x^{n+\frac12}$ is obtained, rearrange \eqref{eq:josephson-trapezoidal} to advance $\phi_x$ by
-\begin{equation}\label{eq:josephson-phi-newton}
-    \phi_{x,i+\tfrac12,j,k}^{n+\frac12} = \phi_{x,i+\tfrac12,j,k}^{n} + \frac{\Delta t}{4}\eta_x\left(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\right).
-\end{equation}
-The instantaneous current is then $J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\phi_x^{n+\frac12}$. The phase is the persistent junction state; the current can be reconstructed from it.
-
-Rearranging \eqref{eq:first-e-ex-adi-josephson-newton} yields the same stencil as \eqref{eq:first-e-ex-adi-tridiagonal}, but with $C_{a,i+\tfrac12,j,k}\to C_{a,i+\tfrac12,j,k}^{N}$ and $C_{b,i+\tfrac12,j,k}\to C_{b,i+\tfrac12,j,k}^{N}$, and an additional nonlinear current term:
+The nonlinear system of equations to be solved is
 \begin{align}
     \begin{split}
         -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
-        + \beta_{x1}^{N}E_{x,i+\tfrac12,j,k}^{n+\frac12}
+        + \beta_{x1}E_{x,i+\tfrac12,j,k}^{n+\frac12}
         - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
-         & = p_{x1}^{N}E_{x,i+\tfrac12,j,k}^{n}                                                                   \\
+        +\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12}
+         & = p_{x1}E_{x,i+\tfrac12,j,k}^{n}                                                                       \\
          & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
          & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
          & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
          & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
-         & \quad - \overline{J}_{\mathrm{J},x,i+\tfrac12,j,k}^{n},
+         & \quad -\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n},
     \end{split}
     \label{eq:first-e-ex-adi-tridiagonal-josephson-newton}
 \end{align}
 where
-\begin{align}
-    \alpha_{x1} & =\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},           \\
-    \gamma_{x1} & =\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},           \\
-    \beta_{x1}^{N}
-                & =\frac{1}{C_{b,i+\tfrac12,j,k}^{N}}+\alpha_{x1}+\gamma_{x1}, \\
-    p_{x1}^{N}
-                & =\frac{C_{a,i+\tfrac12,j,k}^{N}}{C_{b,i+\tfrac12,j,k}^{N}},  \\
-    q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                              \\
-    r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
-\end{align}
+\begin{equation}\label{eq:josephson-new-current}
+    J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\!\left[\phi_x^n+\frac{\Delta t}{4}\eta_x\left(E_x^{n+\frac12}+E_x^n\right)\right].
+\end{equation}
 
-To solve this nonlinear system, let $s$ index the solve direction $y$ at fixed $i,k$, let $u_s$ denote the unknown $E_x^{n+\frac12}$, and let $f_s$ denote the right-hand side without the averaged-current term. A predictor based on the old current is obtained from
-\begin{equation}\label{eq:josephson-predictor}
-    -\alpha_s u_{s-1}^{(0)}+\beta_s^N u_s^{(0)}-\gamma_s u_{s+1}^{(0)}=f_s-j_{c,s}\sin\phi_s^n.
+Formulate into matrix form, along the \(y\)-line at fixed \(i,k\), as
+\begin{equation}\label{eq:josephson-matrix}
+    \mathbf{A}\mathbf{E}+\mathbf{J}(\mathbf{E})=\mathbf{b}.
 \end{equation}
-At Newton iteration $m$, compute the trial phase from the saved old phase and trial field,
-\begin{equation}\label{eq:josephson-trial-phase}
-    \phi_s^{(m)}=\phi_s^n+\frac{\Delta t}{4}\eta_x\left(u_s^{(m)}+E_s^n\right),
+The unknown is the new electric field on that line,
+\begin{equation}\label{eq:josephson-unknown}
+    E_j=E_{x,i+\tfrac12,j,k}^{n+\frac12}.
 \end{equation}
-and evaluate the nonlinear residual
-\begin{equation}\label{eq:josephson-residual}
-    F_s^{(m)}=-\alpha_s u_{s-1}^{(m)}+\beta_s^N u_s^{(m)}-\gamma_s u_{s+1}^{(m)}+\frac{j_{c,s}}{2}\left(\sin\phi_s^n+\sin\phi_s^{(m)}\right)-f_s.
-\end{equation}
-The averaged current depends only on the field at the same edge, so its derivative modifies only the diagonal:
-\begin{equation}\label{eq:josephson-newton-diagonal}
-    d_s^{(m)}=\left.\frac{\partial\overline{J}_{\mathrm{J},s}^{n}}{\partial u_s}\right|_{u_s^{(m)}}=\frac{\Delta t}{8}\eta_xj_{c,s}\cos\phi_s^{(m)}.
-\end{equation}
-Define the Jacobian matrix as the derivative of the residual with respect to the electric-field unknowns. Its entries at iteration $m$ are
-\begin{equation}\label{eq:josephson-jacobian-entries}
-    \mathcal{J}_{sr}^{(m)}=\left.\frac{\partial F_s}{\partial u_r}\right|_{\mathbf{u}^{(m)}}=-\alpha_s\delta_{r,s-1}+\left(\beta_s^N+d_s^{(m)}\right)\delta_{r,s}-\gamma_s\delta_{r,s+1},
-\end{equation}
-where $\delta_{r,s}$ is the Kronecker delta. Write the diagonal entry explicitly as
-\begin{equation}\label{eq:josephson-jacobian-diagonal}
-    b_s^{(m)}=\beta_s^N+\frac{\Delta t}{8}\eta_xj_{c,s}\cos\!\left[\phi_s^n+\frac{\Delta t}{4}\eta_x\left(u_s^{(m)}+E_s^n\right)\right].
-\end{equation}
-For a line with $M$ unconstrained unknowns and prescribed endpoint values eliminated into the right-hand side, the Jacobian is
-\begin{equation}\label{eq:josephson-jacobian-matrix}
-    \mathcal{J}^{(m)}=\begin{pmatrix} b_1^{(m)} & -\gamma_1 & 0 & \cdots & 0 \\ -\alpha_2 & b_2^{(m)} & -\gamma_2 & \ddots & \vdots \\ 0 & \ddots & \ddots & \ddots & 0 \\ \vdots & \ddots & -\alpha_{M-1} & b_{M-1}^{(m)} & -\gamma_{M-1} \\ 0 & \cdots & 0 & -\alpha_M & b_M^{(m)} \end{pmatrix}.
-\end{equation}
-For a periodic line with $M>2$ unique unknowns, identify $u_0=u_M$ and $u_{M+1}=u_1$. The two additional corner entries make the matrix cyclic tridiagonal:
-\begin{equation}\label{eq:josephson-jacobian-periodic}
-    \mathcal{J}_{1M}^{(m)}=-\alpha_1, \qquad \mathcal{J}_{M1}^{(m)}=-\gamma_M.
-\end{equation}
-The nonlinear contribution changes only the diagonal; the off-diagonal and periodic corner entries remain those of the ADI curl operator. In matrix form, the Newton correction satisfies
-\begin{equation}\label{eq:josephson-jacobian-system}
-    \mathcal{J}^{(m)}\delta\mathbf{u}=-\mathbf{F}(\mathbf{u}^{(m)}).
-\end{equation}
-The Newton correction therefore follows from another tridiagonal solve,
-\begin{equation}\label{eq:josephson-newton-solve}
-    -\alpha_s\delta u_{s-1}+\left(\beta_s^N+d_s^{(m)}\right)\delta u_s-\gamma_s\delta u_{s+1}=-F_s^{(m)}.
-\end{equation}
-Update the trial field with a damping factor $0<\lambda\leq1$,
-\begin{equation}\label{eq:josephson-newton-update}
-    u_s^{(m+1)}=u_s^{(m)}+\lambda\delta u_s,
-\end{equation}
-and recompute the trial phase using \eqref{eq:josephson-trial-phase}. The old field, old phase, and explicit right-hand side remain fixed throughout the iteration. Start with $\lambda=1$ and reduce it if the residual does not decrease. Phase increments are never accumulated across Newton iterations. The current and its derivative are evaluated locally, but the Newton correction is coupled along each ADI line through the tridiagonal matrix; no full three-dimensional Newton system is formed.
-
-The magnetic update for $H_z^{n+\frac12}$ is unchanged, and the phase update is \eqref{eq:josephson-phi-newton}. The other directions, and the second half-step, are analogous. In each half-step, solve the electric system to nonlinear convergence before committing the phase and updating the magnetic field. The implicit magnetic response is already represented by the electric stencil. A failed nonlinear solve must not be accepted silently.
-
-For smooth solutions and sufficiently tight nonlinear tolerances, this centered coupling retains second-order temporal accuracy. In the isolated lossless small-phase limit it reduces to the centered linear-inductor update. This does not establish unconditional stability of the full nonlinear spatial ADI scheme: the Newton diagonal contribution can be negative, large steps can cause convergence difficulties, and endpoint averaging does not conserve the nonlinear Josephson energy exactly. Timestep refinement and nonlinear energy checks remain necessary.
-
-\subsection{Taylor Update}
-
-To obtain a linear electric solve, expand the new sine about the known old phase, rather than about zero. Define the phase increment
-\begin{equation}\label{eq:josephson-phase-increment}
-    \delta\phi_x^n = \phi_x^{n+\frac12}-\phi_x^n = \frac{\Delta t}{4}\eta_x\left(E_x^{n+\frac12}+E_x^n\right).
-\end{equation}
-Taylor expansion gives
-\begin{equation}\label{eq:josephson-sine-expansion}
-    \sin(\phi_x^n+\delta\phi_x^n) = \sin\phi_x^n+\cos\phi_x^n\,\delta\phi_x^n+O\!\left((\delta\phi_x^n)^2\right).
-\end{equation}
-Define the phase-dependent junction coupling constant
-\begin{equation}\label{eq:josephson-tangent-coupling}
-    \kappa_{\mathrm{J},x}^n = \eta_x j_{c,x}\cos\phi_x^n,
-\end{equation}
-and the averaged current becomes
-\begin{equation}\label{eq:josephson-linearized-current}
-    \overline{J}_{\mathrm{J},x}^{n} = J_{\mathrm{J},x}^n+\frac{\Delta t}{8}\kappa_{\mathrm{J},x}^n\left(E_x^{n+\frac12}+E_x^n\right)+O(\Delta t^2), \qquad J_{\mathrm{J},x}^n=j_{c,x}\sin\phi_x^n.
-\end{equation}
-Substituting into \eqref{eq:first-e-ex-josephson-semi}, neglecting the $O(\Delta t^2)$ current remainder, and collecting unknowns gives
+\(\mathbf{A}\) is the tridiagonal matrix (or low-rank perturbed tridiagonal matrix if a periodic boundary condition is used) formed from the linear ADI stencil, and \(\mathbf{J}(\mathbf{E})\) is a diagonal matrix, 
 \begin{equation}
-    E_x^{n+\frac12} = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}-\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}E_x^n + \frac{[H_1]-J_{\mathrm{J},x}^n}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}.
+    \mathbf{J}(\mathbf{E}) = \operatorname{diag}\!\left(\mathbf{J}_1(\mathbf{E}),\ldots,\mathbf{J}_M(\mathbf{E})\right),
 \end{equation}
-Define the junction-modified half-step coefficients
-\begin{equation}\label{eq:adi-half-coefficients-josephson}
-    C_a^J = \frac{\dfrac{2\varepsilon}{\Delta t}-\dfrac{\sigma}{2}-\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}, \qquad C_b^J = \frac{1}{\dfrac{2\varepsilon}{\Delta t}+\dfrac{\sigma}{2}+\dfrac{\Delta t}{8}\kappa_{\mathrm{J},x}^n}.
+where \(M\) is the number of unknowns on the line, and its \(j\)-th diagonal element is given by
+\begin{equation}\label{eq:josephson-J-of-E}
+    \mathbf{J}_j(\mathbf{E})=\frac{j_{c,x}}{2}\sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right],
 \end{equation}
-When $I_{c,x}=0$ the Josephson current vanishes, and these coefficients give the existing RC electric update; without shunts they reduce to \eqref{eq:adi-half-coefficients}. The electric update is then
-\begin{equation}\label{eq:first-e-ex-adi-josephson-semi}
-    E_{x,i+\tfrac12,j,k}^{n+\frac12} = C_{a,i+\tfrac12,j,k}^J E_{x,i+\tfrac12,j,k}^{n} + C_{b,i+\tfrac12,j,k}^J\left([H_1]-J_{\mathrm{J},x,i+\tfrac12,j,k}^{n}\right).
-\end{equation}
-Thus, compared with \eqref{eq:first-e-ex-adi}, $\kappa_{\mathrm{J},x}^n$ modifies the local diagonal coefficients $C_a^J$ and $C_b^J$, while the known current $J_{\mathrm{J},x}^n$ enters the right-hand side. Both are evaluated from the old phase and held fixed during the half-step electric solve, just as the linear-inductor coupling and old current are fixed in the lumped-inductance update. After $E_x^{n+\frac12}$ is obtained, rearrange \eqref{eq:josephson-trapezoidal} to advance $\phi_x$ by
-\begin{equation}\label{eq:josephson-phi-semi}
-    \phi_{x,i+\tfrac12,j,k}^{n+\frac12} = \phi_{x,i+\tfrac12,j,k}^{n} + \frac{\Delta t}{4}\eta_x\left(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\right).
-\end{equation}
-The instantaneous current is then $J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\phi_x^{n+\frac12}$. The phase is the persistent junction state; the current can be reconstructed from it.
+so \(\mathbf{J}(\mathbf{E})\) changes only the diagonal. $\mathbf{b}$ is simply the right-hand side.
 
-Rearranging \eqref{eq:first-e-ex-adi-josephson-semi} yields the same stencil as \eqref{eq:first-e-ex-adi-tridiagonal}, but with $C_{a,i+\tfrac12,j,k}\to C_{a,i+\tfrac12,j,k}^{J}$ and $C_{b,i+\tfrac12,j,k}\to C_{b,i+\tfrac12,j,k}^{J}$, and an additional known current term:
-\begin{align}
-    \begin{split}
-        -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
-        + \beta_{x1}^{J}E_{x,i+\tfrac12,j,k}^{n+\frac12}
-        - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
-         & = p_{x1}^{J}E_{x,i+\tfrac12,j,k}^{n}                                                                   \\
-         & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
-         & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
-         & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
-         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
-         & \quad - J_{\mathrm{J},x,i+\tfrac12,j,k}^{n},
-    \end{split}
-    \label{eq:first-e-ex-adi-tridiagonal-josephson}
-\end{align}
+Define the equation to be solved as
+\begin{equation}\label{eq:josephson-residual}
+    \mathbf{F}(\mathbf{E})=\mathbf{A}\mathbf{E}+\mathbf{J}(\mathbf{E})-\mathbf{b}=\mathbf{0}.
+\end{equation}
+The Jacobian matrix of the nonlinear term is
+\begin{equation}\label{eq:josephson-current-jacobian}
+    J_{\mathbf{J}}(\mathbf{E}) = \frac{\partial \mathbf{J}(\mathbf{E})}{\partial \mathbf{E}} = \operatorname{diag}\!\left(d_1(\mathbf{E}),\ldots,d_M(\mathbf{E})\right),
+\end{equation}
 where
-\begin{align}
-    \alpha_{x1} & =\frac{D_{b,i+\tfrac12,j-\tfrac12,k}}{\Delta y^2},           \\
-    \gamma_{x1} & =\frac{D_{b,i+\tfrac12,j+\tfrac12,k}}{\Delta y^2},           \\
-    \beta_{x1}^{J}
-                & =\frac{1}{C_{b,i+\tfrac12,j,k}^{J}}+\alpha_{x1}+\gamma_{x1}, \\
-    p_{x1}^{J}
-                & =\frac{C_{a,i+\tfrac12,j,k}^{J}}{C_{b,i+\tfrac12,j,k}^{J}},  \\
-    q_{x1}      & =D_{b,i+\tfrac12,j-\tfrac12,k},                              \\
-    r_{x1}      & =D_{b,i+\tfrac12,j+\tfrac12,k}.
-\end{align}
-
-The magnetic update for $H_z^{n+\frac12}$ is unchanged, and the phase update is \eqref{eq:josephson-phi-semi}. The other directions, and the second half-step, are analogous. In the second half-step, recompute $J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\phi_x^{n+\frac12}$ and $\kappa_{\mathrm{J},x}^{n+\frac12}=\eta_xj_{c,x}\cos\phi_x^{n+\frac12}$ from the updated phase. Each electric component requires only one tridiagonal solve per half-step; no Newton iteration or predictor--corrector loop is needed. The instantaneous current is always reconstructed using the full sine of the updated phase, not accumulated using a linearized current evolution.
-
-For smooth solutions, $\delta\phi_x^n=O(\Delta t)$, so the omitted term in \eqref{eq:josephson-linearized-current} is $O(\Delta t^2)$ in current. Its contribution to the half-step field update is $O(\Delta t^3)$ because $C_b^J=O(\Delta t)$. Consequently this linearization retains second-order temporal consistency; second-order convergence also requires a stable update and sufficiently accurate linear solves. Expanding about the old phase does not require $\phi_x^n$ itself to be small, but does require the phase change over a half-step to be resolved.
-
-This is the linearly implicit counterpart of the centered lumped-inductor update. In the small-phase limit, $\sin\phi_x\simeq\phi_x$ and $\cos\phi_x\simeq1$, it reduces to the linear-inductor coupling with
-\begin{equation}\label{eq:josephson-linear-limit}
-    \kappa_x = \eta_x j_{c,x} = \frac{\Delta x}{\Delta y\,\Delta z\,L_{J,x}}, \qquad L_{J,x}=\frac{\hbar}{2eI_{c,x}}.
+\begin{equation}\label{eq:josephson-current-jacobian-diagonal}
+    d_j(\mathbf{E})= \frac{\partial \mathbf{J}_j(\mathbf{E})}{\partial E_j} = \frac{\Delta t}{8}\eta_x j_{c,x}\cos\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right].
 \end{equation}
-For the isolated lossless small-phase junction, this limit is the centered linear-inductor update and has no plasma-frequency timestep stability limit. This does not establish unconditional stability of the full nonlinear spatial ADI scheme. The phase-dependent coupling $\kappa_{\mathrm{J},x}^n$ can be negative when $\cos\phi_x^n<0$, and a large timestep can make the modified diagonal unsuitable for the unpivoted tridiagonal solver. A conservative local condition for retaining its positive structure is
-\begin{equation}\label{eq:josephson-positive-diagonal}
-    \frac{1}{C_b^J}=\frac{2\varepsilon}{\Delta t}+\frac{\sigma}{2}+\frac{\Delta t}{8}\kappa_{\mathrm{J},x}^n>0.
+Here \(\eta_x\) and \(j_{c,x}\) are evaluated at edge \(i+\tfrac12,j,k\). The Jacobian of the full residual is therefore
+\begin{equation}\label{eq:josephson-residual-jacobian}
+    J_{\mathbf{F}}(\mathbf{E})=\frac{\partial\mathbf{F}(\mathbf{E})}{\partial\mathbf{E}}=\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}),
 \end{equation}
-This condition is not a complete nonlinear stability criterion. The linearized update does not conserve the nonlinear Josephson energy exactly, and large phase increments can be inaccurate even when the linear system is well conditioned. Timestep refinement and nonlinear energy checks remain necessary.
+which retains the tridiagonal structure. Thus, the Newton update is
+\begin{equation}
+    \mathbf{E}^{(k+1)} = \mathbf{E}^{(k)} + \Delta\mathbf{E}^{(k)},
+\end{equation}
+where
+\begin{equation}
+    \Delta\mathbf{E}^{(k)} = -\left(\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}^{(k)})\right)^{-1}\mathbf{F}(\mathbf{E}^{(k)}).
+\end{equation}
+In practice, we solve the linear system
+\begin{equation}
+    \left(\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}^{(k)})\right)\Delta\mathbf{E}^{(k)} = -\mathbf{F}(\mathbf{E}^{(k)}).
+\end{equation}
 
 \end{document}
