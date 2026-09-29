@@ -1855,20 +1855,15 @@ The nonlinear system of equations to be solved is
         -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
         + \beta_{x1}E_{x,i+\tfrac12,j,k}^{n+\frac12}
         - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
-        +\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12}
+        +\frac12 \Big(J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12} + J_{\mathrm{J},x,i+\tfrac12,j,k}^{n}\Big)
          & = p_{x1}E_{x,i+\tfrac12,j,k}^{n}                                                                       \\
          & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
          & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
          & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
-         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
-         & \quad -\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n},
+         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big),
     \end{split}
     \label{eq:first-e-ex-adi-tridiagonal-josephson-newton}
 \end{align}
-where
-\begin{equation}\label{eq:josephson-new-current}
-    J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\!\left[\phi_x^n+\frac{\Delta t}{4}\eta_x\left(E_x^{n+\frac12}+E_x^n\right)\right].
-\end{equation}
 
 Formulate into matrix form, along the \(y\)-line at fixed \(i,k\), as
 \begin{equation}\label{eq:josephson-matrix}
@@ -1878,15 +1873,11 @@ The unknown is the new electric field on that line,
 \begin{equation}\label{eq:josephson-unknown}
     E_j=E_{x,i+\tfrac12,j,k}^{n+\frac12}.
 \end{equation}
-\(\mathbf{A}\) is the tridiagonal matrix (or low-rank perturbed tridiagonal matrix if a periodic boundary condition is used) formed from the linear ADI stencil, and \(\mathbf{J}(\mathbf{E})\) is a diagonal matrix, 
-\begin{equation}
-    \mathbf{J}(\mathbf{E}) = \operatorname{diag}\!\left(\mathbf{J}_1(\mathbf{E}),\ldots,\mathbf{J}_M(\mathbf{E})\right),
-\end{equation}
-where \(M\) is the number of unknowns on the line, and its \(j\)-th diagonal element is given by
+\(\mathbf{A}\) is the tridiagonal matrix (or low-rank perturbed tridiagonal matrix if a periodic boundary condition is used) formed from the linear ADI stencil, and \(\mathbf{J}(\mathbf{E})\) is the average of the current at the two half steps, whose entries are given by
 \begin{equation}\label{eq:josephson-J-of-E}
-    \mathbf{J}_j(\mathbf{E})=\frac{j_{c,x}}{2}\sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right],
+    \mathbf{J}_j(\mathbf{E})=\frac{j_{c,x}}{2} \left\{\sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right] + \sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}\right]\right\}.
 \end{equation}
-so \(\mathbf{J}(\mathbf{E})\) changes only the diagonal. $\mathbf{b}$ is simply the right-hand side.
+$\mathbf{b}$ is simply the right-hand side.
 
 Define the equation to be solved as
 \begin{equation}\label{eq:josephson-residual}
@@ -1916,5 +1907,14 @@ In practice, we solve the linear system
 \begin{equation}
     \left(\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}^{(k)})\right)\Delta\mathbf{E}^{(k)} = -\mathbf{F}(\mathbf{E}^{(k)}).
 \end{equation}
+
+To initialize the Newton iteration, we use the electric field from the latest time step. The Newton iteration is stopped when the infinity norm of the update, $\|\Delta\mathbf{E}^{(k)}\|_{\infty}$, is less than the convergence tolerance. 
+After the Newton iteration, we update the phase from \eqref{eq:josephson-trapezoidal},
+\begin{equation}\label{eq:josephson-phi-j-newton}
+    \phi_{x,i+\tfrac12,j,k}^{n+\frac12}=\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_{x,i+\tfrac12,j,k}^{n+\frac12}+E_{x,i+\tfrac12,j,k}^{n}\right),
+\end{equation}
+and the current can be computed by $J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\phi_x^{n+\frac12}$.
+
+The other directions, and the second half-step, are analogous.
 
 \end{document}

@@ -1,0 +1,125 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\usepackage[margin=1cm, bottom=2cm]{geometry}
+
+% \input{structure.tex} % Include the file specifying the document structure and custom commands
+
+% \usepackage{indentfirst}\setlength{\parindent}{0em}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{amsmath,amsfonts,stmaryrd,amssymb} % Math packages
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz}
+
+% add linking w/ blue color
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+
+\numberwithin{figure}{section}
+
+\title{Draft}
+
+\begin{document}
+\maketitle
+
+\section{Josephson Junction}
+
+\subsection{Newton Update}
+The nonlinear system of equations to be solved is
+\begin{align}
+    \begin{split}
+        -\alpha_{x1}E_{x,i+\tfrac12,j-1,k}^{n+\frac12}
+        + \beta_{x1}E_{x,i+\tfrac12,j,k}^{n+\frac12}
+        - \gamma_{x1}E_{x,i+\tfrac12,j+1,k}^{n+\frac12}
+        +\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n+\frac12}
+         & = p_{x1}E_{x,i+\tfrac12,j,k}^{n}                                                                       \\
+         & \quad +\frac{1}{\Delta y}\Big(H_{z,i+\tfrac12,j+\tfrac12,k}^{n}-H_{z,i+\tfrac12,j-\tfrac12,k}^{n}\Big) \\
+         & \quad -\frac{1}{\Delta z}\Big(H_{y,i+\tfrac12,j,k+\tfrac12}^{n}-H_{y,i+\tfrac12,j,k-\tfrac12}^{n}\Big) \\
+         & \quad +\frac{q_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j-\tfrac12,k}^{n}-E_{y,i,j-\tfrac12,k}^{n}\Big)    \\
+         & \quad -\frac{r_{x1}}{\Delta x\Delta y}\Big(E_{y,i+1,j+\tfrac12,k}^{n}-E_{y,i,j+\tfrac12,k}^{n}\Big)    \\
+         & \quad -\frac12 J_{\mathrm{J},x,i+\tfrac12,j,k}^{n},
+    \end{split}
+    \label{eq:first-e-ex-adi-tridiagonal-josephson-newton}
+\end{align}
+where
+\begin{equation}\label{eq:josephson-new-current}
+    J_{\mathrm{J},x}^{n+\frac12}=j_{c,x}\sin\!\left[\phi_x^n+\frac{\Delta t}{4}\eta_x\left(E_x^{n+\frac12}+E_x^n\right)\right].
+\end{equation}
+
+Formulate into matrix form, along the \(y\)-line at fixed \(i,k\), as
+\begin{equation}\label{eq:josephson-matrix}
+    \mathbf{A}\mathbf{E}+\mathbf{J}(\mathbf{E})=\mathbf{b}.
+\end{equation}
+The unknown is the new electric field on that line,
+\begin{equation}\label{eq:josephson-unknown}
+    E_j=E_{x,i+\tfrac12,j,k}^{n+\frac12}.
+\end{equation}
+\(\mathbf{A}\) is the tridiagonal matrix (or low-rank perturbed tridiagonal matrix if a periodic boundary condition is used) formed from the linear ADI stencil, and \(\mathbf{J}(\mathbf{E})\) is a diagonal matrix, 
+\begin{equation}
+    \mathbf{J}(\mathbf{E}) = \operatorname{diag}\!\left(\mathbf{J}_1(\mathbf{E}),\ldots,\mathbf{J}_M(\mathbf{E})\right),
+\end{equation}
+where \(M\) is the number of unknowns on the line, and its \(j\)-th diagonal element is given by
+\begin{equation}\label{eq:josephson-J-of-E}
+    \mathbf{J}_j(\mathbf{E})=\frac{j_{c,x}}{2}\sin\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right],
+\end{equation}
+so \(\mathbf{J}(\mathbf{E})\) changes only the diagonal. $\mathbf{b}$ is simply the right-hand side.
+
+Define the equation to be solved as
+\begin{equation}\label{eq:josephson-residual}
+    \mathbf{F}(\mathbf{E})=\mathbf{A}\mathbf{E}+\mathbf{J}(\mathbf{E})-\mathbf{b}=\mathbf{0}.
+\end{equation}
+The Jacobian matrix of the nonlinear term is
+\begin{equation}\label{eq:josephson-current-jacobian}
+    J_{\mathbf{J}}(\mathbf{E}) = \frac{\partial \mathbf{J}(\mathbf{E})}{\partial \mathbf{E}} = \operatorname{diag}\!\left(d_1(\mathbf{E}),\ldots,d_M(\mathbf{E})\right),
+\end{equation}
+where
+\begin{equation}\label{eq:josephson-current-jacobian-diagonal}
+    d_j(\mathbf{E})= \frac{\partial \mathbf{J}_j(\mathbf{E})}{\partial E_j} = \frac{\Delta t}{8}\eta_x j_{c,x}\cos\!\left[\phi_{x,i+\tfrac12,j,k}^{n}+\frac{\Delta t}{4}\eta_x\left(E_j+E_{x,i+\tfrac12,j,k}^{n}\right)\right].
+\end{equation}
+Here \(\eta_x\) and \(j_{c,x}\) are evaluated at edge \(i+\tfrac12,j,k\). The Jacobian of the full residual is therefore
+\begin{equation}\label{eq:josephson-residual-jacobian}
+    J_{\mathbf{F}}(\mathbf{E})=\frac{\partial\mathbf{F}(\mathbf{E})}{\partial\mathbf{E}}=\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}),
+\end{equation}
+which retains the tridiagonal structure. Thus, the Newton update is
+\begin{equation}
+    \mathbf{E}^{(k+1)} = \mathbf{E}^{(k)} + \Delta\mathbf{E}^{(k)},
+\end{equation}
+where
+\begin{equation}
+    \Delta\mathbf{E}^{(k)} = -\left(\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}^{(k)})\right)^{-1}\mathbf{F}(\mathbf{E}^{(k)}).
+\end{equation}
+In practice, we solve the linear system
+\begin{equation}
+    \left(\mathbf{A}+J_{\mathbf{J}}(\mathbf{E}^{(k)})\right)\Delta\mathbf{E}^{(k)} = -\mathbf{F}(\mathbf{E}^{(k)}).
+\end{equation}
+
+\end{document}
